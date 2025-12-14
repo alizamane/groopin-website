@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 
 export default function Home() {
   const [status, setStatus] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
 
   const messageClass = useMemo(() => {
     if (!status) return "hidden";
@@ -12,9 +13,10 @@ export default function Home() {
       : "col-span-full mt-2 rounded-lg p-4 text-sm bg-green-100 text-green-700";
   }, [status]);
 
-  const onSubmit = (event) => {
+  const onSubmit = async (event) => {
     event.preventDefault();
-    const formData = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const formData = new FormData(form);
     const name = formData.get("name")?.toString().trim();
     const email = formData.get("email")?.toString().trim();
 
@@ -23,9 +25,42 @@ export default function Home() {
       return;
     }
 
-    // Replace this with a POST to your waitlist endpoint (e.g., Vercel serverless or external service).
-    setStatus({ type: "success", message: "You're on the waiting list! We'll keep you posted." });
-    event.currentTarget.reset();
+    try {
+      setSubmitting(true);
+      setStatus(null);
+
+      const response = await fetch("/api/waitlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email })
+      });
+
+      let payload = null;
+      try {
+        payload = await response.json();
+      } catch (jsonErr) {
+        console.error("Failed to parse waitlist response", jsonErr);
+      }
+
+      if (!response.ok || payload?.error) {
+        const message = payload?.error || "Failed to save. Please try again.";
+        setStatus({ type: "error", message });
+        return;
+      }
+
+      if (payload?.duplicate) {
+        setStatus({ type: "success", message: "You're already on the list. Thanks for checking!" });
+      } else {
+        setStatus({ type: "success", message: "You're on the waiting list! We'll keep you posted." });
+      }
+
+      form.reset();
+    } catch (err) {
+      console.error("Waitlist submit error", err);
+      setStatus({ type: "error", message: "Network error. Please try again." });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -98,6 +133,7 @@ export default function Home() {
                       className="block w-full rounded-md bg-white px-4 py-3 text-base text-gray-900 outline outline-1 -outline-offset-1 placeholder:text-gray-400 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-groopinPurple sm:text-base/6 outline-gray-300"
                       placeholder="Khalid BOUZIANE"
                       required
+                      disabled={submitting}
                     />
                   </div>
                 </div>
@@ -113,15 +149,17 @@ export default function Home() {
                       className="block w-full rounded-md bg-white px-4 py-3 text-base text-gray-900 outline outline-1 -outline-offset-1 placeholder:text-gray-400 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-groopinPurple sm:text-base/6 outline-gray-300"
                       placeholder="khalid@gmail.com"
                       required
+                      disabled={submitting}
                     />
                   </div>
                 </div>
 
                 <button
                   type="submit"
-                  className="col-span-full inline-flex items-center justify-center px-6 py-3 text-lg font-semibold text-white bg-gradient-to-r from-groopinPurple to-groopinPink rounded-lg shadow-lg hover:from-groopinPink hover:to-groopinPurple transition w-full sm:w-auto"
+                  className="col-span-full inline-flex items-center justify-center px-6 py-3 text-lg font-semibold text-white bg-gradient-to-r from-groopinPurple to-groopinPink rounded-lg shadow-lg hover:from-groopinPink hover:to-groopinPurple transition w-full sm:w-auto disabled:opacity-70 disabled:cursor-not-allowed"
+                  disabled={submitting}
                 >
-                  Join the waiting list
+                  {submitting ? "Submitting..." : "Join the waiting list"}
                 </button>
 
                 <div className={messageClass} role="alert" aria-live="polite">
