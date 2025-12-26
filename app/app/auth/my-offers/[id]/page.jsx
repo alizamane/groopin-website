@@ -617,34 +617,26 @@ export default function MyOfferDetailsPage() {
           {t("share_offer_hint")}
         </p>
 
-        <div className="mt-4 rounded-2xl border border-[#EADAF1] bg-white px-4 py-4">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-secondary-400">
-            {t("share_link")}
-          </p>
-          <p className="mt-2 break-all text-sm font-semibold text-primary-900">
-            {shareUrl || "-"}
-          </p>
-          <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-            <Button
-              variant="outline"
-              label={t("copy_link")}
-              className="w-full"
-              onClick={handleCopyLink}
-              disabled={!shareUrl}
-            />
-            <Button
-              label={t("share")}
-              className="w-full"
-              onClick={handleNativeShare}
-              disabled={!shareUrl}
-            />
-          </div>
-          {shareFeedback ? (
-            <p className="mt-3 text-xs text-secondary-500">
-              {shareFeedback}
-            </p>
-          ) : null}
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+          <Button
+            label={t("share")}
+            className="w-full"
+            onClick={handleNativeShare}
+            disabled={!shareUrl}
+          />
+          <Button
+            variant="outline"
+            label={t("copy_link")}
+            className="w-full"
+            onClick={handleCopyLink}
+            disabled={!shareUrl}
+          />
         </div>
+        {shareFeedback ? (
+          <p className="mt-3 text-xs text-secondary-500">
+            {shareFeedback}
+          </p>
+        ) : null}
 
         <div className="mt-4 rounded-3xl border border-[#EADAF1] bg-white px-5 py-6">
           <div className="flex flex-col items-center gap-2">
@@ -696,11 +688,7 @@ export default function MyOfferDetailsPage() {
               </div>
               <Button
                 variant="outline"
-                label={
-                  shareBusy
-                    ? t("share_card_generating")
-                    : t("download_share_card")
-                }
+                label={t("download_qr")}
                 className="mt-5 w-full"
                 onClick={handleDownloadShareCard}
                 disabled={shareBusy}
