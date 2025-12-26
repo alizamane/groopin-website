@@ -251,8 +251,6 @@ export default function OfferDetailsPage() {
 
   return (
     <div className="space-y-6">
-      <Button variant="link" label={t("Close")} onClick={() => router.back()} />
-
       <div className="relative overflow-hidden rounded-3xl border border-[#EADAF1] bg-white">
         {backgroundUrl ? (
           <div
