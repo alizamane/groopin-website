@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 
@@ -52,6 +52,14 @@ export default function MyOfferDetailsPage() {
   const [isShareOpen, setShareOpen] = useState(false);
   const [shareFeedback, setShareFeedback] = useState("");
   const [shareBusy, setShareBusy] = useState(false);
+  const [scanToken, setScanToken] = useState("");
+  const [scanBusy, setScanBusy] = useState(false);
+  const [scanResult, setScanResult] = useState(null);
+  const [scanError, setScanError] = useState("");
+  const [isScannerOpen, setScannerOpen] = useState(false);
+  const scanVideoRef = useRef(null);
+  const scanStreamRef = useRef(null);
+  const scanFrameRef = useRef(null);
   const shareUrl = useMemo(() => {
     if (typeof window === "undefined" || !offer?.id) return "";
     return `${window.location.origin}/app/auth/offers/${offer.id}`;
@@ -71,6 +79,99 @@ export default function MyOfferDetailsPage() {
   useEffect(() => {
     loadOffer();
   }, [params.id]);
+
+  useEffect(() => {
+    if (!isScannerOpen) {
+      if (scanFrameRef.current) {
+        cancelAnimationFrame(scanFrameRef.current);
+        scanFrameRef.current = null;
+      }
+      if (scanStreamRef.current) {
+        scanStreamRef.current.getTracks().forEach((track) => track.stop());
+        scanStreamRef.current = null;
+      }
+      if (scanVideoRef.current) {
+        scanVideoRef.current.srcObject = null;
+      }
+      return;
+    }
+
+    let canceled = false;
+    const startScanner = async () => {
+      setScanError("");
+      setScanResult(null);
+      try {
+        if (!navigator?.mediaDevices?.getUserMedia) {
+          throw new Error("Camera not supported");
+        }
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "environment" }
+        });
+        if (canceled) return;
+        scanStreamRef.current = stream;
+        if (scanVideoRef.current) {
+          scanVideoRef.current.srcObject = stream;
+          await scanVideoRef.current.play();
+        }
+
+        const { default: jsQR } = await import("jsqr");
+        const canvas = document.createElement("canvas");
+        const context = canvas.getContext("2d");
+
+        const scanFrame = () => {
+          if (!scanVideoRef.current || !context) return;
+          const video = scanVideoRef.current;
+          if (video.readyState === video.HAVE_ENOUGH_DATA) {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const imageData = context.getImageData(
+              0,
+              0,
+              canvas.width,
+              canvas.height
+            );
+            const code = jsQR(
+              imageData.data,
+              imageData.width,
+              imageData.height
+            );
+            if (code?.data) {
+              const tokenValue = code.data.trim();
+              if (tokenValue) {
+                setScanToken(tokenValue);
+                handleScanTicket(tokenValue);
+                setScannerOpen(false);
+                return;
+              }
+            }
+          }
+          scanFrameRef.current = requestAnimationFrame(scanFrame);
+        };
+
+        scanFrameRef.current = requestAnimationFrame(scanFrame);
+      } catch {
+        setScanError(t("ticket_scan_no_camera"));
+      }
+    };
+
+    startScanner();
+
+    return () => {
+      canceled = true;
+      if (scanFrameRef.current) {
+        cancelAnimationFrame(scanFrameRef.current);
+        scanFrameRef.current = null;
+      }
+      if (scanStreamRef.current) {
+        scanStreamRef.current.getTracks().forEach((track) => track.stop());
+        scanStreamRef.current = null;
+      }
+      if (scanVideoRef.current) {
+        scanVideoRef.current.srcObject = null;
+      }
+    };
+  }, [isScannerOpen, t]);
 
   if (status === "loading") {
     return <div className="h-40 animate-pulse rounded-2xl bg-neutral-100" />;
@@ -343,6 +444,28 @@ export default function MyOfferDetailsPage() {
     setShareFeedback("");
   };
 
+  const handleScanTicket = async (tokenOverride) => {
+    const value = (tokenOverride || scanToken).trim();
+    if (!value || scanBusy) return;
+    if (tokenOverride) {
+      setScanToken(value);
+    }
+    setScanBusy(true);
+    setScanError("");
+    setScanResult(null);
+    try {
+      const payload = await apiRequest("tickets/scan", {
+        method: "POST",
+        body: { token: value }
+      });
+      setScanResult(payload || null);
+    } catch (error) {
+      setScanError(error?.message || t("ticket_scan_failed"));
+    } finally {
+      setScanBusy(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="relative overflow-hidden rounded-3xl border border-[#EADAF1] bg-white">
@@ -473,7 +596,7 @@ export default function MyOfferDetailsPage() {
             <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-primary-700">
               Owner actions
             </h3>
-            <div className="mt-4 space-y-3">
+            <div className="mt-5 space-y-4">
               <Button
                 label={t("share")}
                 size="lg"
@@ -491,7 +614,7 @@ export default function MyOfferDetailsPage() {
                   }
                 />
               ) : null}
-              <Link href={`/app/auth/my-offers/${offer.id}/edit`}>
+              <Link href={`/app/auth/my-offers/${offer.id}/edit`} className="block">
                 <Button
                   label={isDraft ? "Edit draft" : t("Edit")}
                   size="lg"
@@ -515,6 +638,81 @@ export default function MyOfferDetailsPage() {
               />
               {actionError ? (
                 <p className="text-xs text-danger-600">{actionError}</p>
+              ) : null}
+            </div>
+            <div className="mt-6 rounded-2xl border border-[#EADAF1] bg-white p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary-700">
+                  {t("ticket_scan_title")}
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  label={t("ticket_scan_camera")}
+                  className="px-3 py-1 text-xs"
+                  onClick={() => setScannerOpen(true)}
+                />
+              </div>
+              <p className="mt-2 text-xs text-secondary-500">
+                {t("ticket_scan_hint")}
+              </p>
+              <div className="mt-3 flex flex-col gap-2">
+                <input
+                  value={scanToken}
+                  onChange={(event) => setScanToken(event.target.value)}
+                  placeholder={t("ticket_scan_placeholder")}
+                  className="w-full rounded-2xl border border-[#EADAF1] px-3 py-2 text-xs text-secondary-600 outline-none focus:border-primary-500"
+                />
+                <Button
+                  label={t("ticket_scan_button")}
+                  size="sm"
+                  className="w-full"
+                  onClick={handleScanTicket}
+                  loading={scanBusy}
+                  disabled={!scanToken.trim() || scanBusy}
+                />
+              </div>
+              {scanError ? (
+                <p className="mt-2 text-xs text-danger-600">{scanError}</p>
+              ) : null}
+              {scanResult?.ticket && scanResult?.user ? (
+                <div className="mt-3 rounded-2xl border border-[#EADAF1] bg-[#F7F1FA] p-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-secondary-500">
+                    {t("ticket_scan_result")}
+                  </p>
+                  <div className="mt-3 flex items-center gap-3">
+                    <UserAvatar user={scanResult.user} size={44} withBorder />
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-primary-900">
+                        {scanResult.user.name || ""}
+                      </p>
+                      <p className="text-xs text-secondary-500">
+                        {t("ticket_scan_status")}{" "}
+                        <span className="font-semibold text-primary-700">
+                          {scanResult.ticket.status}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-secondary-500">
+                    <span>
+                      {t("ticket_scan_count")}:{" "}
+                      <span className="font-semibold text-primary-700">
+                        {scanResult.ticket.scan_count}
+                      </span>
+                    </span>
+                    {scanResult.ticket.checked_in_at ? (
+                      <span>
+                        {t("ticket_scan_time")}:{" "}
+                        <span className="font-semibold text-primary-700">
+                          {new Date(
+                            scanResult.ticket.checked_in_at
+                          ).toLocaleString()}
+                        </span>
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
               ) : null}
             </div>
           </div>
@@ -695,6 +893,35 @@ export default function MyOfferDetailsPage() {
               />
             </>
           ) : null}
+        </div>
+      </Modal>
+
+      <Modal
+        open={isScannerOpen}
+        title={t("ticket_scan_title")}
+        onClose={() => setScannerOpen(false)}
+      >
+        <div className="space-y-4">
+          <div className="overflow-hidden rounded-3xl border border-[#EADAF1] bg-black">
+            <video
+              ref={scanVideoRef}
+              className="h-64 w-full object-cover"
+              playsInline
+              muted
+            />
+          </div>
+          <p className="text-xs text-secondary-500">
+            {t("ticket_scan_camera_hint")}
+          </p>
+          {scanError ? (
+            <p className="text-xs text-danger-600">{scanError}</p>
+          ) : null}
+          <Button
+            variant="outline"
+            label={t("Close")}
+            className="w-full"
+            onClick={() => setScannerOpen(false)}
+          />
         </div>
       </Modal>
 

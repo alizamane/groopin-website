@@ -78,11 +78,15 @@ export default function OfferCard({ offer, currentUserId }) {
   const isOffersContext =
     pathname === "/app/auth/drawer/tabs" ||
     pathname?.startsWith("/app/auth/offers");
+  const isOfferPending = offer?.status === "pending";
+  const participantStatus = !isOwner && isParticipant;
+  const pendingStatus = !isOwner && isPending;
   const statusLabel = (() => {
     if (offer?.is_draft || offer?.status === "draft") return t("Draft");
     if (isClosed) return t("closed");
-    if (isPending) return t("pending request");
-    if (isParticipant) return t("request_accepted");
+    if (isOwner && offer?.localized_status) return offer.localized_status;
+    if (pendingStatus) return t("pending request");
+    if (participantStatus) return t("request_accepted");
     if (offer?.localized_status) return offer.localized_status;
     return t("Actives");
   })();
@@ -91,8 +95,9 @@ export default function OfferCard({ offer, currentUserId }) {
       return "bg-[#F1E5F6] text-secondary-600";
     }
     if (isClosed) return "bg-secondary-400 text-white";
-    if (isPending) return "bg-[#D59500] text-white";
-    if (isParticipant) return "bg-primary-600 text-white";
+    if (isOfferPending) return "bg-[#D59500] text-white";
+    if (pendingStatus) return "bg-[#D59500] text-white";
+    if (participantStatus) return "bg-primary-600 text-white";
     return "bg-secondary-500 text-white";
   })();
   const isRequestDisabled =
