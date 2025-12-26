@@ -6,6 +6,7 @@ import Link from "next/link";
 import OfferCard from "../../../../../components/offers/offer-card";
 import Button from "../../../../../components/ui/button";
 import Modal from "../../../../../components/ui/modal";
+import { PlusIcon } from "../../../../../components/ui/heroicons";
 import { useI18n } from "../../../../../components/i18n-provider";
 import { apiRequest } from "../../../../lib/api-client";
 import { getUser } from "../../../../lib/session";
@@ -550,19 +551,7 @@ export default function TabsHomePage() {
         aria-label={t("offers.create_offer")}
         title={t("offers.create_offer")}
       >
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M12 5v14" />
-          <path d="M5 12h14" />
-        </svg>
+        <PlusIcon size={22} className="text-white" />
       </Link>
     </div>
   );

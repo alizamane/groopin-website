@@ -3,6 +3,12 @@
 import React from "react";
 
 import { useI18n } from "../i18n-provider";
+import {
+  CalendarDaysIcon,
+  ClockIcon,
+  MapPinIcon,
+  TagIcon
+} from "../ui/heroicons";
 
 const formatDate = (value, locale) => {
   if (!value) return "-";
@@ -24,69 +30,7 @@ const formatTime = (value) => {
   return value;
 };
 
-const CalendarIcon = () => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.6"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <rect x="3" y="4" width="18" height="18" rx="3" />
-    <path d="M16 2v4M8 2v4M3 10h18" />
-  </svg>
-);
-
-const ClockIcon = () => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.6"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <circle cx="12" cy="12" r="9" />
-    <path d="M12 7v5l3 2" />
-  </svg>
-);
-
-const TagIcon = () => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.6"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M20.59 13.41 12 22l-8-8V2h12l4.59 4.59Z" />
-    <circle cx="8.5" cy="8.5" r="1.5" />
-  </svg>
-);
-
-const MapIcon = () => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.6"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M12 21s-6-4.35-6-9a6 6 0 1 1 12 0c0 4.65-6 9-6 9Z" />
-    <circle cx="12" cy="12" r="2.5" />
-  </svg>
-);
+const iconProps = { size: 14, className: "text-secondary-500", strokeWidth: 1.5 };
 
 export default function OfferMainDetails({ offer }) {
   const { t, locale } = useI18n();
@@ -106,7 +50,7 @@ export default function OfferMainDetails({ offer }) {
   return (
     <div className="grid gap-2 text-xs text-secondary-500 sm:grid-cols-2">
       <div className="flex items-start gap-2 rounded-2xl bg-[#F7F1FA] px-3 py-2 text-primary-900">
-        <CalendarIcon />
+        <CalendarDaysIcon {...iconProps} />
         <div className="flex flex-col leading-tight">
           <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-secondary-400">
             {t("Start date")}
@@ -120,7 +64,7 @@ export default function OfferMainDetails({ offer }) {
         </div>
       </div>
       <div className="flex items-start gap-2 rounded-2xl bg-[#F7F1FA] px-3 py-2 text-primary-900">
-        <ClockIcon />
+        <ClockIcon {...iconProps} />
         <div className="flex flex-col leading-tight">
           <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-secondary-400">
             {t("End date")}
@@ -136,11 +80,11 @@ export default function OfferMainDetails({ offer }) {
         </div>
       </div>
       <div className="flex min-w-0 items-center gap-2 rounded-full bg-[#F7F1FA] px-3 py-2 text-primary-900">
-        <TagIcon />
+        <TagIcon {...iconProps} />
         <span className="truncate font-medium">{priceLabel}</span>
       </div>
       <div className="flex items-center gap-2 rounded-2xl bg-[#F7F1FA] px-3 py-2 text-primary-900 sm:col-span-2">
-        <MapIcon />
+        <MapPinIcon {...iconProps} />
         <span className="truncate font-medium">{address || "-"}</span>
       </div>
     </div>

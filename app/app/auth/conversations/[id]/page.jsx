@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 
 import Button from "../../../../../components/ui/button";
+import { ArrowLeftIcon, PaperAirplaneIcon } from "../../../../../components/ui/heroicons";
 import { useI18n } from "../../../../../components/i18n-provider";
 import { apiRequest } from "../../../../lib/api-client";
 import { getUser } from "../../../../lib/session";
@@ -173,18 +174,7 @@ export default function ConversationPage() {
           className="flex h-10 w-10 items-center justify-center rounded-full border border-[#EADAF1] text-secondary-600 transition hover:bg-[#F7F1FA]"
           aria-label={t("Close")}
         >
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M15 18l-6-6 6-6" />
-          </svg>
+          <ArrowLeftIcon size={20} className="text-secondary-600" />
         </button>
         {offer && offerHref ? (
           <Link
@@ -317,19 +307,7 @@ export default function ConversationPage() {
           {sendState === "sending" ? (
             <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/60 border-t-white" />
           ) : (
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M5 12h14" />
-              <path d="M13 6l6 6-6 6" />
-            </svg>
+            <PaperAirplaneIcon size={18} className="text-white" />
           )}
         </button>
       </form>

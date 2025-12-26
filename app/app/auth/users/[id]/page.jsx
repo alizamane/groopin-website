@@ -9,6 +9,7 @@ import UserAvatar from "../../../../../components/user/user-avatar";
 import Button from "../../../../../components/ui/button";
 import Modal from "../../../../../components/ui/modal";
 import ConfirmModal from "../../../../../components/ui/confirm-modal";
+import { EllipsisHorizontalCircleIcon } from "../../../../../components/ui/heroicons";
 import { useI18n } from "../../../../../components/i18n-provider";
 import { apiRequest } from "../../../../lib/api-client";
 import { getUser } from "../../../../lib/session";
@@ -235,20 +236,7 @@ export default function UserProfilePage() {
             className="flex h-10 w-10 items-center justify-center rounded-full border border-[#EADAF1] text-secondary-600 transition hover:bg-[#F7F1FA]"
             aria-label={t("Actions")}
           >
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <circle cx="12" cy="5" r="1.5" />
-              <circle cx="12" cy="12" r="1.5" />
-              <circle cx="12" cy="19" r="1.5" />
-            </svg>
+            <EllipsisHorizontalCircleIcon size={24} className="text-secondary-600" />
           </button>
         ) : null}
       </div>

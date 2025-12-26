@@ -5,6 +5,14 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
 import AnimatedLogo from "./ui/animated-logo";
+import {
+  Bars3Icon,
+  BellIcon,
+  ChatBubbleLeftRightIcon,
+  ChevronDoubleUpIcon,
+  HomeIcon,
+  MegaphoneIcon
+} from "./ui/heroicons";
 import UserAvatar from "./user/user-avatar";
 import { useI18n } from "./i18n-provider";
 import { apiRequest } from "../app/lib/api-client";
@@ -214,10 +222,10 @@ export default function AppShell({ children }) {
         <div className="mx-auto flex h-16 w-full max-w-5xl items-center px-4 md:px-6">
           <button
             type="button"
-            className="text-2xl text-primary-900"
+            className="text-primary-900"
             onClick={() => setDrawerOpen(true)}
           >
-            =
+            <Bars3Icon size={26} className="text-primary-900" />
           </button>
           <div className="flex flex-1 justify-center">
             <AnimatedLogo width={90} height={40} />
@@ -227,7 +235,7 @@ export default function AppShell({ children }) {
             onClick={() => router.push("/app/auth/drawer/notifications")}
             className="relative flex h-10 w-10 items-center justify-center rounded-full border border-[#EADAF1] text-secondary-600 transition hover:bg-[#F7F1FA]"
           >
-            <BellIcon />
+            <BellIcon size={22} className="text-primary-900" />
             {unreadCount > 0 ? (
               <span className="absolute -right-1 -top-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-secondary-600 px-1 text-[10px] text-white">
                 {unreadCount > 9 ? "9+" : unreadCount}
@@ -311,7 +319,16 @@ export default function AppShell({ children }) {
                 aria-current={tab.active ? "page" : undefined}
               >
                 <span className="relative flex items-center justify-center">
-                  <Icon active={tab.active} user={user} />
+                  {tab.label === t("Profile") ? (
+                    <Icon active={tab.active} user={user} />
+                  ) : (
+                    <Icon
+                      size={22}
+                      className={
+                        tab.active ? "text-secondary-600" : "text-secondary-400"
+                      }
+                    />
+                  )}
                   {badge > 0 ? (
                     <span className="absolute -right-2 -top-2 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-secondary-500 px-1 text-[10px] text-white">
                       {badge > 9 ? "9+" : badge}
@@ -325,84 +342,6 @@ export default function AppShell({ children }) {
         </div>
       </nav>
     </div>
-  );
-}
-
-function HomeIcon({ active }) {
-  return (
-    <svg
-      width="22"
-      height="22"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={active ? "text-secondary-600" : "text-secondary-400"}
-    >
-      <path d="M4 10.5L12 4l8 6.5" />
-      <path d="M6 10v8a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-8" />
-    </svg>
-  );
-}
-
-function MyOffersIcon({ active }) {
-  return (
-    <svg
-      width="22"
-      height="22"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={active ? "text-secondary-600" : "text-secondary-400"}
-    >
-      <path d="M3.5 12h17" />
-      <path d="M8 5h8l1 3H7l1-3Z" />
-      <path d="M6 12v6a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-6" />
-    </svg>
-  );
-}
-
-function RequestsIcon({ active }) {
-  return (
-    <svg
-      width="22"
-      height="22"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={active ? "text-secondary-600" : "text-secondary-400"}
-    >
-      <path d="M5 12h14" />
-      <path d="M12 5l-3 3m3-3 3 3" />
-      <path d="M6 12v6a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-6" />
-    </svg>
-  );
-}
-
-function GroopsIcon({ active }) {
-  return (
-    <svg
-      width="22"
-      height="22"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={active ? "text-secondary-600" : "text-secondary-400"}
-    >
-      <path d="M21 11a4 4 0 0 1-4 4H9l-4 3V7a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4Z" />
-      <path d="M9 9h6M9 12h4" />
-    </svg>
   );
 }
 
@@ -434,20 +373,6 @@ function ProfileIcon({ active, user }) {
   );
 }
 
-function BellIcon() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M15 17H9" />
-      <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 7h18s-3 0-3-7" />
-    </svg>
-  );
-}
+const MyOffersIcon = MegaphoneIcon;
+const RequestsIcon = ChevronDoubleUpIcon;
+const GroopsIcon = ChatBubbleLeftRightIcon;

@@ -5,6 +5,19 @@ import { useRouter } from "next/navigation";
 
 import { apiRequest } from "../../../../lib/api-client";
 import { useI18n } from "../../../../../components/i18n-provider";
+import {
+  ArrowUturnLeftIcon,
+  CheckCircleIcon,
+  ClockIcon as HeroClockIcon,
+  ExclamationTriangleIcon,
+  InformationCircleIcon as HeroInformationCircleIcon,
+  SparklesIcon,
+  StarIcon as HeroStarIcon,
+  TrashIcon as HeroTrashIcon,
+  UserMinusIcon as HeroUserMinusIcon,
+  UserPlusIcon as HeroUserPlusIcon,
+  XCircleIcon
+} from "../../../../../components/ui/heroicons";
 
 const formatDate = (value, locale) => {
   if (!value) return "";
@@ -482,18 +495,7 @@ function IconContainer({ children }) {
 function CheckIcon() {
   return (
     <IconContainer>
-      <svg
-        width="18"
-        height="18"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M20 6L9 17l-5-5" />
-      </svg>
+      <CheckCircleIcon size={18} className="text-primary-700" />
     </IconContainer>
   );
 }
@@ -501,19 +503,7 @@ function CheckIcon() {
 function XIcon() {
   return (
     <IconContainer>
-      <svg
-        width="18"
-        height="18"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M18 6 6 18" />
-        <path d="M6 6 18 18" />
-      </svg>
+      <XCircleIcon size={18} className="text-primary-700" />
     </IconContainer>
   );
 }
@@ -521,18 +511,7 @@ function XIcon() {
 function SparkleIcon() {
   return (
     <IconContainer>
-      <svg
-        width="18"
-        height="18"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="m12 3 1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8L12 3Z" />
-      </svg>
+      <SparklesIcon size={18} className="text-primary-700" />
     </IconContainer>
   );
 }
@@ -540,19 +519,7 @@ function SparkleIcon() {
 function ClockIcon() {
   return (
     <IconContainer>
-      <svg
-        width="18"
-        height="18"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <circle cx="12" cy="12" r="9" />
-        <path d="M12 7v5l3 2" />
-      </svg>
+      <HeroClockIcon size={18} className="text-primary-700" />
     </IconContainer>
   );
 }
@@ -560,20 +527,7 @@ function ClockIcon() {
 function AlertIcon() {
   return (
     <IconContainer>
-      <svg
-        width="18"
-        height="18"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M10.3 3.7 2.5 17a2 2 0 0 0 1.8 3h15.4a2 2 0 0 0 1.8-3L13.7 3.7a2 2 0 0 0-3.4 0Z" />
-        <path d="M12 9v4" />
-        <path d="M12 17h.01" />
-      </svg>
+      <ExclamationTriangleIcon size={18} className="text-primary-700" />
     </IconContainer>
   );
 }
@@ -581,21 +535,7 @@ function AlertIcon() {
 function UserPlusIcon() {
   return (
     <IconContainer>
-      <svg
-        width="18"
-        height="18"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M16 11a4 4 0 1 0-8 0" />
-        <path d="M12 15c-4 0-7 2-7 4v1h14v-1c0-2-3-4-7-4Z" />
-        <path d="M19 8v4" />
-        <path d="M17 10h4" />
-      </svg>
+      <HeroUserPlusIcon size={18} className="text-primary-700" />
     </IconContainer>
   );
 }
@@ -603,20 +543,7 @@ function UserPlusIcon() {
 function UserMinusIcon() {
   return (
     <IconContainer>
-      <svg
-        width="18"
-        height="18"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M16 11a4 4 0 1 0-8 0" />
-        <path d="M12 15c-4 0-7 2-7 4v1h14v-1c0-2-3-4-7-4Z" />
-        <path d="M17 10h4" />
-      </svg>
+      <HeroUserMinusIcon size={18} className="text-primary-700" />
     </IconContainer>
   );
 }
@@ -624,19 +551,7 @@ function UserMinusIcon() {
 function UndoIcon() {
   return (
     <IconContainer>
-      <svg
-        width="18"
-        height="18"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M9 14 4 9l5-5" />
-        <path d="M20 20a8 8 0 0 0-8-8H4" />
-      </svg>
+      <ArrowUturnLeftIcon size={18} className="text-primary-700" />
     </IconContainer>
   );
 }
@@ -644,20 +559,7 @@ function UndoIcon() {
 function TrashIcon() {
   return (
     <IconContainer>
-      <svg
-        width="18"
-        height="18"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M3 6h18" />
-        <path d="M8 6V4h8v2" />
-        <path d="M19 6l-1 14H6L5 6" />
-      </svg>
+      <HeroTrashIcon size={18} className="text-primary-700" />
     </IconContainer>
   );
 }
@@ -665,18 +567,7 @@ function TrashIcon() {
 function StarIcon() {
   return (
     <IconContainer>
-      <svg
-        width="18"
-        height="18"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M12 3.5 14.8 9l5.9.9-4.3 4.2 1 5.8L12 17.8 6.6 19.9l1-5.8-4.3-4.2L9.2 9 12 3.5Z" />
-      </svg>
+      <HeroStarIcon size={18} className="text-primary-700" />
     </IconContainer>
   );
 }
@@ -684,20 +575,7 @@ function StarIcon() {
 function InfoIcon() {
   return (
     <IconContainer>
-      <svg
-        width="18"
-        height="18"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <circle cx="12" cy="12" r="9" />
-        <path d="M12 16v-4" />
-        <path d="M12 8h.01" />
-      </svg>
+      <HeroInformationCircleIcon size={18} className="text-primary-700" />
     </IconContainer>
   );
 }

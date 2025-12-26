@@ -176,12 +176,6 @@ export default function MyOfferDetailsPage() {
               >
                 {t("Participants information")}
               </button>
-              <Link
-                href={`/app/auth/my-offers/${offer.id}/participants`}
-                className="inline-flex items-center rounded-full bg-white px-4 py-2 text-xs font-semibold text-primary-700 ring-1 ring-[#EADAF1]"
-              >
-                {t("Participants information")}
-              </Link>
               {pendingCount ? (
                 <span className="inline-flex items-center rounded-full bg-[#D59500] px-4 py-2 text-xs font-semibold text-white">
                   {t("Participation requests")}: {pendingCount}
