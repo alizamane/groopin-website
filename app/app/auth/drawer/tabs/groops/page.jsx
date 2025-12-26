@@ -53,8 +53,6 @@ export default function GroopsPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-bold text-primary-800">{t("Groops")}</h1>
-
       {status === "loading" ? (
         <div className="space-y-3">
           {Array.from({ length: 3 }).map((_, index) => (
@@ -88,7 +86,7 @@ export default function GroopsPage() {
               <Link
                 key={conversation.id}
                 href={`/app/auth/conversations/${conversation.id}`}
-                className={`flex items-start gap-4 rounded-2xl border border-[#EADAF1] px-4 py-4 transition ${
+                className={`flex items-start gap-4 overflow-hidden rounded-2xl border border-[#EADAF1] px-4 py-4 transition ${
                   hasUnread ? "bg-[#F7F1FA]" : "bg-white"
                 }`}
               >
@@ -98,13 +96,13 @@ export default function GroopsPage() {
                     lastItemText={participantsCount ? `${participantsCount}` : ""}
                   />
                 </div>
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="truncate text-base font-semibold text-primary-900">
                         {conversation?.offer?.title || t("Groops")}
                       </p>
-                      <p className="mt-1 text-sm text-secondary-400">
+                      <p className="mt-1 text-sm text-secondary-400 line-clamp-2 break-words">
                         {truncate(
                           conversation?.last_message?.automatic
                             ? ""

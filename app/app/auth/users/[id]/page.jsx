@@ -24,6 +24,7 @@ export default function UserProfilePage() {
   const [reportReason, setReportReason] = useState("");
   const [reportError, setReportError] = useState("");
   const [isReportModalOpen, setReportModalOpen] = useState(false);
+  const [isActionsModalOpen, setActionsModalOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState("");
   const currentUser = getUser();
   const dateLocale =
@@ -175,16 +176,18 @@ export default function UserProfilePage() {
 
   return (
     <div className="space-y-6 pb-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-primary-900">
-            {t("profile.title")}
-          </h1>
-          <p className="text-secondary-400">
-            {t("profile.complete_profile_question")}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
+      <div className="relative flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        {isSelf ? (
+          <div>
+            <h1 className="text-2xl font-semibold text-primary-900">
+              {t("profile.title")}
+            </h1>
+            <p className="text-secondary-400">
+              {t("profile.complete_profile_question")}
+            </p>
+          </div>
+        ) : null}
+        <div className="flex flex-wrap items-center gap-2 sm:static sm:ml-auto">
           {isSelf ? (
             <Link href="/app/auth/profile/edit">
               <Button
@@ -193,61 +196,61 @@ export default function UserProfilePage() {
                 className="px-4"
               />
             </Link>
-          ) : (
-            <>
-              <Button
-                variant="outline"
-                label={user.signaled ? t("Already reported") : t("Report user")}
-                size="sm"
-                className="px-4"
-                disabled={user.signaled || isActionLoading}
-                onClick={() => {
-                  setReportError("");
-                  setReportModalOpen(true);
-                }}
-              />
-              <Button
-                variant={user.blocked ? "secondary" : "destructive"}
-                label={user.blocked ? t("Unblock user") : t("Block user")}
-                size="sm"
-                className="px-4"
-                disabled={isActionLoading}
-                onClick={() => {
-                  setActionError("");
-                  setConfirmAction(user.blocked ? "unblock" : "block");
-                }}
-              />
-            </>
-          )}
+          ) : null}
         </div>
       </div>
 
-      <div className="flex items-center gap-4">
-        <UserAvatar user={user} size={86} withBorder />
-        <div className="space-y-2">
-          <p className="text-xl font-semibold text-primary-900">
-            {user.first_name} {user.last_name}
-          </p>
-          {user.average_rating ? (
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1">
-                {Array.from({ length: 5 }).map((_, index) => (
-                  <StarIcon
-                    key={`star-${index}`}
-                    filled={index + 1 <= Math.round(user.average_rating)}
-                  />
-                ))}
-              </div>
-              <span className="text-sm text-secondary-500">
-                {user.average_rating.toFixed(1)}/5
-              </span>
-            </div>
-          ) : (
-            <p className="text-sm text-secondary-400">
-              {t("No user ratings yet")}
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <UserAvatar user={user} size={86} withBorder />
+          <div className="space-y-2">
+            <p className="text-xl font-semibold text-primary-900">
+              {user.first_name} {user.last_name}
             </p>
-          )}
+            {user.average_rating ? (
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: 5 }).map((_, index) => (
+                    <StarIcon
+                      key={`star-${index}`}
+                      filled={index + 1 <= Math.round(user.average_rating)}
+                    />
+                  ))}
+                </div>
+                <span className="text-sm text-secondary-500">
+                  {user.average_rating.toFixed(1)}/5
+                </span>
+              </div>
+            ) : (
+              <p className="text-sm text-secondary-400">
+                {t("No user ratings yet")}
+              </p>
+            )}
+          </div>
         </div>
+        {!isSelf ? (
+          <button
+            type="button"
+            onClick={() => setActionsModalOpen(true)}
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-[#EADAF1] text-secondary-600 transition hover:bg-[#F7F1FA]"
+            aria-label={t("Actions")}
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <circle cx="12" cy="5" r="1.5" />
+              <circle cx="12" cy="12" r="1.5" />
+              <circle cx="12" cy="19" r="1.5" />
+            </svg>
+          </button>
+        ) : null}
       </div>
 
       <div className="grid gap-4 rounded-2xl border border-[#EADAF1] bg-white p-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -412,6 +415,37 @@ export default function UserProfilePage() {
             onClick={handleReportUser}
             loading={actionState === "report"}
             disabled={!reportReason.trim()}
+          />
+        </div>
+      </Modal>
+
+      <Modal
+        open={isActionsModalOpen}
+        title={t("Actions")}
+        onClose={() => setActionsModalOpen(false)}
+      >
+        <div className="flex flex-col gap-3">
+          <Button
+            variant="outline"
+            label={user.signaled ? t("Already reported") : t("Report user")}
+            className="w-full"
+            disabled={user.signaled || isActionLoading}
+            onClick={() => {
+              setActionsModalOpen(false);
+              setReportError("");
+              setReportModalOpen(true);
+            }}
+          />
+          <Button
+            variant={user.blocked ? "secondary" : "destructive"}
+            label={user.blocked ? t("Unblock user") : t("Block user")}
+            className="w-full"
+            disabled={isActionLoading}
+            onClick={() => {
+              setActionsModalOpen(false);
+              setActionError("");
+              setConfirmAction(user.blocked ? "unblock" : "block");
+            }}
           />
         </div>
       </Modal>

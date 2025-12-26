@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 
 export default function UsersAvatarsList({ users = [], lastItemText }) {
   const visible = users.slice(0, 3);
@@ -9,10 +10,38 @@ export default function UsersAvatarsList({ users = [], lastItemText }) {
       {visible.map((user, index) => (
         <div
           key={user.id || index}
-          className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-primary-500 text-xs font-semibold text-white"
-          style={{ marginLeft: index === 0 ? 0 : -8 }}
+          className="relative flex h-7 w-7 items-center justify-center overflow-hidden rounded-full border-2 border-white bg-primary-500 text-[10px] font-semibold text-white"
+          style={{
+            marginLeft: index === 0 ? 0 : -8,
+            zIndex: visible.length - index
+          }}
         >
-          {user.first_name?.[0] || "G"}
+          {(() => {
+            const avatarUrl =
+              user?.avatar_image_url ||
+              user?.avatar_url ||
+              user?.avatar ||
+              user?.image ||
+              user?.profile_image_url ||
+              user?.profile_image;
+            if (!user?.uses_default_image && avatarUrl) {
+              return (
+            <Image
+              src={avatarUrl}
+              alt={user?.name || user?.first_name || "User avatar"}
+              width={28}
+              height={28}
+              className="h-full w-full object-cover"
+            />
+              );
+            }
+            return (
+            <span>
+              {(user?.first_name?.[0] || "G") +
+                (user?.last_name?.[0] || "")}
+            </span>
+            );
+          })()}
         </div>
       ))}
       {lastItemText ? (

@@ -211,10 +211,6 @@ export default function TabsHomePage() {
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-4">
-        <h1 className="text-xl font-bold text-primary-800">
-          {t("Offers")}
-        </h1>
-
         <div className="flex flex-col gap-3 md:flex-row md:items-center">
           <input
             value={searchValue}
@@ -235,8 +231,8 @@ export default function TabsHomePage() {
           </button>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="flex flex-1 items-center gap-2 overflow-x-auto pb-2">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center">
+          <div className="flex flex-1 flex-wrap items-center gap-2 pb-1 md:flex-nowrap md:overflow-x-auto">
               {renderChip(
                 "category-all",
                 t("All"),
@@ -252,9 +248,6 @@ export default function TabsHomePage() {
                 )
               )}
           </div>
-          <Link href="/app/auth/my-offers/create" className="shrink-0">
-            <Button label={t("offers.create_offer")} size="sm" className="px-4" />
-          </Link>
         </div>
       </div>
 
@@ -291,10 +284,7 @@ export default function TabsHomePage() {
         onClose={() => setFilterOpen(false)}
       >
         <div className="max-h-[70vh] space-y-5 overflow-y-auto pr-2">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold text-secondary-600">
-              {t("Filters")}
-            </p>
+          <div className="flex items-center justify-end">
             <button
               type="button"
               onClick={handleResetFilters}
@@ -553,6 +543,27 @@ export default function TabsHomePage() {
           />
         </div>
       </Modal>
+
+      <Link
+        href="/app/auth/my-offers/create"
+        className="fixed bottom-20 right-4 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-secondary-600 text-white shadow-lg transition hover:bg-secondary-500"
+        aria-label={t("offers.create_offer")}
+        title={t("offers.create_offer")}
+      >
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M12 5v14" />
+          <path d="M5 12h14" />
+        </svg>
+      </Link>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 
@@ -41,6 +41,8 @@ export default function ConversationPage() {
   const [sendError, setSendError] = useState("");
   const [conversation, setConversation] = useState(null);
   const currentUser = getUser();
+  const bottomRef = useRef(null);
+  const firstScrollRef = useRef(true);
   const dateLocale =
     locale === "fr" ? "fr-FR" : locale === "ar" ? "ar-MA" : "en-US";
 
@@ -114,6 +116,13 @@ export default function ConversationPage() {
     });
   }, [messages]);
 
+  useEffect(() => {
+    if (!bottomRef.current) return;
+    const behavior = firstScrollRef.current ? "auto" : "smooth";
+    bottomRef.current.scrollIntoView({ behavior, block: "end" });
+    firstScrollRef.current = false;
+  }, [sortedMessages.length]);
+
   const handleSend = async (event) => {
     event.preventDefault();
     const trimmed = content.trim();
@@ -157,21 +166,39 @@ export default function ConversationPage() {
 
   return (
     <div className="flex h-[calc(100vh-12rem)] flex-col gap-4 overflow-hidden">
-      <div className="flex items-center justify-between">
-        <Button variant="link" label={t("Close")} onClick={() => router.back()} />
-        <h1 className="text-lg font-semibold text-primary-900">
-          {t("Group chat")}
-        </h1>
-      </div>
-
-      {offer && offerHref ? (
-        <Link
-          href={offerHref}
-          className="rounded-2xl bg-[#F7F1FA] px-4 py-3 text-center text-lg font-semibold text-primary-700"
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => router.back()}
+          className="flex h-10 w-10 items-center justify-center rounded-full border border-[#EADAF1] text-secondary-600 transition hover:bg-[#F7F1FA]"
+          aria-label={t("Close")}
         >
-          {offer.title}
-        </Link>
-      ) : null}
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M15 18l-6-6 6-6" />
+          </svg>
+        </button>
+        {offer && offerHref ? (
+          <Link
+            href={offerHref}
+            className="flex-1 truncate rounded-full bg-[#F7F1FA] px-4 py-2 text-sm font-semibold text-primary-700"
+          >
+            {offer.title}
+          </Link>
+        ) : (
+          <p className="text-sm font-semibold text-primary-900">
+            {t("Groops")}
+          </p>
+        )}
+      </div>
 
       <div className="flex min-h-0 flex-1 flex-col rounded-3xl border border-[#EADAF1] bg-white p-4">
         <div className="flex-1 overflow-y-auto pr-2">
@@ -265,6 +292,7 @@ export default function ConversationPage() {
                   );
                 });
               })()}
+              <div ref={bottomRef} />
             </div>
           ) : null}
         </div>
@@ -272,20 +300,38 @@ export default function ConversationPage() {
 
       <form
         onSubmit={handleSend}
-        className="flex flex-col gap-3 rounded-3xl border border-[#EADAF1] bg-white p-4 sm:flex-row sm:items-center"
+        className="flex items-center gap-2 rounded-full border border-[#EADAF1] bg-white px-3 py-2"
       >
         <input
           value={content}
           onChange={(event) => setContent(event.target.value)}
           placeholder={t("Type a message")}
-          className="w-full rounded-full border border-[#EADAF1] px-4 py-3 text-sm text-secondary-600 outline-none focus:border-primary-500"
+          className="w-full bg-transparent px-2 py-2 text-sm text-secondary-600 outline-none"
         />
-        <Button
+        <button
           type="submit"
-          label={t("Submit")}
-          className="w-full sm:w-auto"
-          loading={sendState === "sending"}
-        />
+          disabled={sendState === "sending" || content.trim().length === 0}
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary-600 text-white transition hover:bg-secondary-500 disabled:cursor-not-allowed disabled:bg-secondary-400"
+          aria-label={t("Submit")}
+        >
+          {sendState === "sending" ? (
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/60 border-t-white" />
+          ) : (
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M5 12h14" />
+              <path d="M13 6l6 6-6 6" />
+            </svg>
+          )}
+        </button>
       </form>
       {sendError ? (
         <p className="text-xs text-danger-600">{sendError}</p>

@@ -40,10 +40,9 @@ export default function MyOffersPage() {
   }, [selectedStatus, t]);
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-primary-800">{t("Offers")}</h1>
-        <div className="flex flex-wrap items-center gap-2">
+    <div className="space-y-6">
+      <div className="flex items-center justify-center">
+        <div className="flex flex-wrap items-center justify-center gap-3">
           <Link href="/app/auth/my-offers/create">
             <Button label={t("offers.create_offer")} size="sm" className="px-4" />
           </Link>
@@ -57,22 +56,24 @@ export default function MyOffersPage() {
         </div>
       </div>
 
-      <div className="flex justify-center gap-2 rounded-full bg-white p-2 shadow-sm">
-        {STATUS_FILTERS.map((filter) => {
-          const active = selectedStatus === filter.value;
-          return (
-            <button
-              key={filter.value}
-              type="button"
-              onClick={() => setSelectedStatus(filter.value)}
-              className={`rounded-full px-4 py-2 text-xs font-semibold transition ${
-                active ? "bg-secondary-500 text-white" : "text-secondary-500"
-              }`}
-            >
-              {filter.label}
-            </button>
-          );
-        })}
+      <div className="sticky top-20 z-30 flex justify-center">
+        <div className="flex justify-center gap-2 rounded-full bg-white/95 p-2 shadow-sm backdrop-blur">
+          {STATUS_FILTERS.map((filter) => {
+            const active = selectedStatus === filter.value;
+            return (
+              <button
+                key={filter.value}
+                type="button"
+                onClick={() => setSelectedStatus(filter.value)}
+                className={`rounded-full px-4 py-2 text-xs font-semibold transition ${
+                  active ? "bg-secondary-500 text-white" : "text-secondary-500"
+                }`}
+              >
+                {filter.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {status === "loading" ? (

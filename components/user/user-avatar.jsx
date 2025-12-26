@@ -7,10 +7,17 @@ const getBgColor = () => "#B12587";
 
 export default function UserAvatar({ user, size = 60, withBorder = false }) {
   const isDefaultAvatar = user?.uses_default_image;
+  const avatarUrl =
+    user?.avatar_image_url ||
+    user?.avatar_url ||
+    user?.avatar ||
+    user?.image ||
+    user?.profile_image_url ||
+    user?.profile_image;
   const initials =
     (user?.first_name?.[0] || "U") + (user?.last_name?.[0] || "");
 
-  if (isDefaultAvatar || !user?.avatar_image_url) {
+  if (isDefaultAvatar || !avatarUrl) {
     return (
       <div
         className={`flex items-center justify-center rounded-full text-white ${
@@ -35,7 +42,7 @@ export default function UserAvatar({ user, size = 60, withBorder = false }) {
       style={{ width: size, height: size }}
     >
       <Image
-        src={user.avatar_image_url}
+        src={avatarUrl}
         alt={user.name || "User avatar"}
         width={size}
         height={size}

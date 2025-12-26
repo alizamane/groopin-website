@@ -50,25 +50,27 @@ export default function RequestsPage() {
   }, [selected, t]);
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-center gap-2 rounded-full bg-white p-2 shadow-sm">
-        {filters.map((filter) => {
-          const active = selected === filter.value;
-          return (
-            <button
-              key={filter.value}
-              type="button"
-              onClick={() => setSelected(filter.value)}
-              className={`rounded-full px-4 py-2 text-xs font-semibold ${
-                active
-                  ? "bg-secondary-500 text-white"
-                  : "text-secondary-500"
-              }`}
-            >
-              {filter.label}
-            </button>
-          );
-        })}
+    <div className="space-y-6">
+      <div className="sticky top-20 z-30 flex justify-center">
+        <div className="flex justify-center gap-2 rounded-full bg-white/95 p-2 shadow-sm backdrop-blur">
+          {filters.map((filter) => {
+            const active = selected === filter.value;
+            return (
+              <button
+                key={filter.value}
+                type="button"
+                onClick={() => setSelected(filter.value)}
+                className={`rounded-full px-4 py-2 text-xs font-semibold ${
+                  active
+                    ? "bg-secondary-500 text-white"
+                    : "text-secondary-500"
+                }`}
+              >
+                {filter.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {status === "loading" ? (
