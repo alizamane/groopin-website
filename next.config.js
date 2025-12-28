@@ -7,6 +7,11 @@ const nextConfig = {
         protocol: "https",
         hostname: "tajrib.groopin.io",
         pathname: "/storage/**"
+      },
+      {
+        protocol: "https",
+        hostname: "ui-avatars.com",
+        pathname: "/api/**"
       }
     ]
   }

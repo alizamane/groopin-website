@@ -7,6 +7,7 @@ import { useParams, useRouter } from "next/navigation";
 import UserAvatar from "../../../../../../components/user/user-avatar";
 import Button from "../../../../../../components/ui/button";
 import ConfirmModal from "../../../../../../components/ui/confirm-modal";
+import { CheckIcon, XMarkIcon } from "../../../../../../components/ui/heroicons";
 import { useI18n } from "../../../../../../components/i18n-provider";
 import { apiRequest } from "../../../../../lib/api-client";
 
@@ -145,11 +146,14 @@ export default function MyOfferParticipantsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <Button variant="link" label={t("Close")} onClick={() => router.back()} />
-        <Link href={`/app/auth/my-offers/${params.id}`}>
-          <Button variant="outline" size="sm" label={t("Details")} />
-        </Link>
+      <div className="flex items-center">
+        <Button
+          variant="link"
+          label={t("Close")}
+          onClick={() =>
+            router.push(`/app/auth/my-offers/${params.id}?tab=participants`)
+          }
+        />
       </div>
 
       <div>
@@ -179,19 +183,23 @@ export default function MyOfferParticipantsPage() {
               const isBusy =
                 actionState.id === request.id &&
                 ["accept", "reject"].includes(actionState.type);
+              const isAccepting =
+                isBusy && actionState.type === "accept";
+              const isRejecting =
+                isBusy && actionState.type === "reject";
               return (
                 <div
                   key={request.id}
                   className="rounded-2xl border border-[#EADAF1] bg-white p-4"
                 >
-                  <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center justify-between gap-3">
                     <Link
                       href={`/app/auth/users/${user.id}`}
-                      className="flex items-center gap-3"
+                      className="flex min-w-0 items-center gap-3"
                     >
                       <UserAvatar user={user} size={52} withBorder />
-                      <div>
-                        <p className="text-sm font-semibold text-primary-900">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-primary-900">
                           {user.first_name} {user.last_name}
                         </p>
                         <p className="text-xs text-secondary-400">
@@ -201,23 +209,39 @@ export default function MyOfferParticipantsPage() {
                         </p>
                       </div>
                     </Link>
-                    <div className="flex gap-2">
-                      <Button
-                        label={isBusy ? t("Loading more...") : t("Accepted")}
-                        size="sm"
+                    <div className="flex shrink-0 items-center gap-2">
+                      <button
+                        type="button"
                         onClick={() => handleAccept(request.id)}
                         disabled={isBusy}
-                      />
-                      <Button
-                        variant="outline"
-                        label={
-                          isBusy ? t("Loading more...") : t("Decline participant")
-                        }
-                        size="sm"
-                        className="border-danger-600 text-danger-600"
+                        aria-label={t("Accepted")}
+                        className="flex h-9 w-9 items-center justify-center rounded-full bg-success-600 text-white shadow-sm transition hover:bg-success-700 disabled:opacity-60"
+                      >
+                        {isAccepting ? (
+                          <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                        ) : (
+                          <CheckIcon
+                            size={18}
+                            className="text-white"
+                          />
+                        )}
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => handleReject(request.id)}
                         disabled={isBusy}
-                      />
+                        aria-label={t("Decline participant")}
+                        className="flex h-9 w-9 items-center justify-center rounded-full bg-danger-600 text-white shadow-sm transition hover:bg-danger-700 disabled:opacity-60"
+                      >
+                        {isRejecting ? (
+                          <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                        ) : (
+                          <XMarkIcon
+                            size={18}
+                            className="text-white"
+                          />
+                        )}
+                      </button>
                     </div>
                   </div>
                   {request.message ? (

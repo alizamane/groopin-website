@@ -44,3 +44,14 @@ body {
   align-items: center;
   justify-content: center;
 }
+
+.brand-picker {
+  accent-color: #B12587;
+  color-scheme: light;
+}
+
+.brand-picker::-webkit-calendar-picker-indicator {
+  color: #B12587;
+  opacity: 1;
+  filter: invert(27%) sepia(52%) saturate(1900%) hue-rotate(280deg) brightness(92%) contrast(95%);
+}

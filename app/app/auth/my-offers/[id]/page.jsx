@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import OfferMainDetails from "../../../../../components/offers/offer-main-details";
 import UserAvatar from "../../../../../components/user/user-avatar";
@@ -13,6 +13,7 @@ import ConfirmModal from "../../../../../components/ui/confirm-modal";
 import QrCodeCanvas, {
   drawQrToCanvas
 } from "../../../../../components/ui/qr-code";
+import { CheckIcon, XMarkIcon } from "../../../../../components/ui/heroicons";
 import { useI18n } from "../../../../../components/i18n-provider";
 import { apiRequest } from "../../../../lib/api-client";
 
@@ -42,12 +43,22 @@ const loadImage = (src) =>
 export default function MyOfferDetailsPage() {
   const params = useParams();
   const router = useRouter();
-  const { t } = useI18n();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const { t, locale } = useI18n();
   const [offer, setOffer] = useState(null);
   const [status, setStatus] = useState("loading");
   const [actionState, setActionState] = useState("idle");
   const [actionError, setActionError] = useState("");
   const [isParticipantsOpen, setParticipantsOpen] = useState(false);
+  const [isRequestsOpen, setRequestsOpen] = useState(false);
+  const [requests, setRequests] = useState([]);
+  const [requestsStatus, setRequestsStatus] = useState("idle");
+  const [requestsError, setRequestsError] = useState("");
+  const [requestActionState, setRequestActionState] = useState({
+    type: "",
+    id: null
+  });
   const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
   const [isShareOpen, setShareOpen] = useState(false);
   const [shareFeedback, setShareFeedback] = useState("");
@@ -56,6 +67,7 @@ export default function MyOfferDetailsPage() {
   const [scanBusy, setScanBusy] = useState(false);
   const [scanResult, setScanResult] = useState(null);
   const [scanError, setScanError] = useState("");
+  const [isScanResultOpen, setScanResultOpen] = useState(false);
   const [checkedInEntries, setCheckedInEntries] = useState([]);
   const [checkedInCount, setCheckedInCount] = useState(0);
   const [checkedInError, setCheckedInError] = useState("");
@@ -64,18 +76,84 @@ export default function MyOfferDetailsPage() {
   const scanVideoRef = useRef(null);
   const scanStreamRef = useRef(null);
   const scanFrameRef = useRef(null);
+  const scanBusyRef = useRef(false);
+  const scanResultOpenRef = useRef(false);
+  const lastScanRef = useRef({ token: "", time: 0 });
   const shareUrl = useMemo(() => {
     if (typeof window === "undefined" || !offer?.id) return "";
     return `${window.location.origin}/app/auth/offers/${offer.id}`;
   }, [offer?.id]);
-  const ownerTabs = useMemo(
-    () => [
-      { id: "overview", label: t("Overview") },
-      { id: "participants", label: t("Participants") },
-      { id: "checkin", label: t("ticket_scan_title") }
-    ],
-    [t]
+  const dateLocale =
+    locale === "fr" ? "fr-FR" : locale === "ar" ? "ar-MA" : "en-US";
+  const headerDateLocale =
+    locale === "fr" ? "fr-FR" : locale === "ar" ? "ar-MA" : "en-GB";
+  const isPublishedOffer = Boolean(
+    offer &&
+      !offer.is_draft &&
+      offer.status !== "draft" &&
+      offer.status !== "pending"
   );
+  const isActiveOffer = Boolean(
+    offer &&
+      offer.status === "active" &&
+      !offer.is_draft &&
+      !offer.is_closed
+  );
+  const ownerTabs = useMemo(
+    () => {
+      if (!isPublishedOffer) {
+        return [{ id: "overview", label: t("Overview") }];
+      }
+      const tabs = [
+        { id: "overview", label: t("Overview") },
+        { id: "participants", label: t("Participants") }
+      ];
+      if (isActiveOffer) {
+        tabs.push({ id: "checkin", label: t("ticket_scan_title") });
+      }
+      return tabs;
+    },
+    [t, isActiveOffer, isPublishedOffer]
+  );
+  const tabParam = searchParams?.get("tab") || "";
+  const lastTabParamRef = useRef(tabParam);
+
+  const formatShortToken = (date, formatLocale, options) => {
+    const value = new Intl.DateTimeFormat(formatLocale, options).format(date);
+    const normalized = value.replace(/\./g, "").trim().slice(0, 3);
+    if (!normalized) return value;
+    const capitalized =
+      normalized.charAt(0).toUpperCase() + normalized.slice(1).toLowerCase();
+    return `${capitalized}.`;
+  };
+
+  const formatHeaderDate = (value) => {
+    if (!value) return "-";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    const weekday = formatShortToken(date, headerDateLocale, { weekday: "short" });
+    const dayNumber = new Intl.DateTimeFormat(headerDateLocale, {
+      day: "numeric"
+    }).format(date);
+    const month = formatShortToken(date, headerDateLocale, { month: "short" });
+    const year = new Intl.DateTimeFormat(headerDateLocale, {
+      year: "numeric"
+    }).format(date);
+    return `${weekday} ${dayNumber} ${month} ${year}`;
+  };
+
+  const handleTabChange = (nextTab) => {
+    setOwnerTab(nextTab);
+    if (!pathname) return;
+    const nextParams = new URLSearchParams(searchParams?.toString() || "");
+    if (nextTab === "overview") {
+      nextParams.delete("tab");
+    } else {
+      nextParams.set("tab", nextTab);
+    }
+    const query = nextParams.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname);
+  };
   const checkedInUserIds = useMemo(() => {
     return new Set(
       checkedInEntries
@@ -92,6 +170,20 @@ export default function MyOfferDetailsPage() {
       setStatus("ready");
     } catch {
       setStatus("error");
+    }
+  };
+
+  const loadRequests = async () => {
+    if (!params.id) return;
+    setRequestsStatus("loading");
+    setRequestsError("");
+    try {
+      const payload = await apiRequest(`offer-requests?offer_id=${params.id}`);
+      setRequests(payload?.data || []);
+      setRequestsStatus("ready");
+    } catch (error) {
+      setRequestsError(error?.message || t("general.error_has_occurred"));
+      setRequestsStatus("error");
     }
   };
 
@@ -116,17 +208,63 @@ export default function MyOfferDetailsPage() {
   }, [params.id]);
 
   useEffect(() => {
+    if (!isRequestsOpen) return;
+    loadRequests();
+  }, [isRequestsOpen, params.id, t]);
+
+  useEffect(() => {
     if (!offer?.id) return;
+    if (!isActiveOffer) return;
     loadCheckins();
-  }, [offer?.id, t]);
+  }, [offer?.id, t, isActiveOffer]);
+
+  useEffect(() => {
+    if (tabParam === lastTabParamRef.current) return;
+    lastTabParamRef.current = tabParam;
+    if (!tabParam && ownerTab !== "overview") {
+      setOwnerTab("overview");
+      return;
+    }
+    if (tabParam === "overview" && ownerTab !== "overview") {
+      setOwnerTab("overview");
+      return;
+    }
+    if (tabParam === "participants" && isPublishedOffer && ownerTab !== "participants") {
+      setOwnerTab("participants");
+      return;
+    }
+    if (tabParam === "checkin" && isActiveOffer && ownerTab !== "checkin") {
+      setOwnerTab("checkin");
+    }
+  }, [tabParam, isPublishedOffer, isActiveOffer, ownerTab]);
+
+  useEffect(() => {
+    if (!isPublishedOffer && ownerTab !== "overview") {
+      setOwnerTab("overview");
+      return;
+    }
+    if (!isActiveOffer && ownerTab === "checkin") {
+      setOwnerTab("overview");
+    }
+  }, [isActiveOffer, isPublishedOffer, ownerTab]);
 
   useEffect(() => {
     setScanResult(null);
     setScanError("");
+    setScanResultOpen(false);
     setCheckedInEntries([]);
     setCheckedInCount(0);
     setCheckedInError("");
   }, [params.id]);
+
+  useEffect(() => {
+    scanBusyRef.current = scanBusy;
+  }, [scanBusy]);
+
+  useEffect(() => {
+    scanResultOpenRef.current = isScanResultOpen;
+  }, [isScanResultOpen]);
+
 
   useEffect(() => {
     if (!isScannerOpen) {
@@ -170,6 +308,10 @@ export default function MyOfferDetailsPage() {
           if (!scanVideoRef.current || !context) return;
           const video = scanVideoRef.current;
           if (video.readyState === video.HAVE_ENOUGH_DATA) {
+            if (scanBusyRef.current || scanResultOpenRef.current) {
+              scanFrameRef.current = requestAnimationFrame(scanFrame);
+              return;
+            }
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             context.drawImage(video, 0, 0, canvas.width, canvas.height);
@@ -187,10 +329,16 @@ export default function MyOfferDetailsPage() {
             if (code?.data) {
               const tokenValue = code.data.trim();
               if (tokenValue) {
-                setScanToken(tokenValue);
-                handleScanTicket(tokenValue);
-                setScannerOpen(false);
-                return;
+                const now = Date.now();
+                const lastScan = lastScanRef.current;
+                if (
+                  lastScan.token !== tokenValue ||
+                  now - lastScan.time > 2000
+                ) {
+                  lastScanRef.current = { token: tokenValue, time: now };
+                  setScanToken(tokenValue);
+                  handleScanTicket(tokenValue);
+                }
               }
             }
           }
@@ -242,9 +390,6 @@ export default function MyOfferDetailsPage() {
       : offer?.is_closed
         ? t("closed")
         : t("Actives"));
-  const participantsText = offer?.max_participants
-    ? `${offer.participants_count}/${offer.max_participants}`
-    : String(offer.participants_count || 0);
   const pendingCount = offer?.pending_participants_count || 0;
   const dynamicAnswers = offer?.resolved_dynamic_answers || {};
   const dynamicEntries = Object.entries(dynamicAnswers);
@@ -254,9 +399,24 @@ export default function MyOfferDetailsPage() {
   const ownerParticipant = participantsList.find(
     (user) => user.id === offer?.owner?.id
   );
+  const participantsCount =
+    (offer?.participants_count ?? participantsList.length ?? 0) +
+    (ownerParticipant ? 0 : 1);
+  const maxParticipants = offer?.max_participants ?? null;
+  const displayMax =
+    maxParticipants && participantsCount > maxParticipants
+      ? participantsCount
+      : maxParticipants;
+  const participantsText = displayMax
+    ? `${participantsCount}/${displayMax}`
+    : String(participantsCount);
   const otherParticipants = participantsList.filter(
     (user) => user.id !== offer?.owner?.id
   );
+  const ownerId = offer?.owner?.id;
+  const ownerPresentOffset =
+    ownerId && !checkedInUserIds.has(ownerId) ? 1 : 0;
+  const presentCount = checkedInCount + ownerPresentOffset;
   const ownerName = `${offer?.owner?.first_name || ""} ${
     offer?.owner?.last_name || ""
   }`.trim();
@@ -286,6 +446,110 @@ export default function MyOfferDetailsPage() {
     const diff = Date.now() - date.getTime();
     const ageDate = new Date(diff);
     return Math.abs(ageDate.getUTCFullYear() - 1970);
+  };
+
+  const formatRequestDate = (value) => {
+    if (!value) return "";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    return date.toLocaleDateString(dateLocale, {
+      month: "short",
+      day: "numeric",
+      year: "numeric"
+    });
+  };
+  const formatScanDateTime = (value) => {
+    if (!value) return "-";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toLocaleString(dateLocale, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+  };
+
+  const resolveScanValidity = (payload, errorMessage) => {
+    if (errorMessage) return false;
+    if (!payload) return null;
+    const explicit =
+      payload.valid ?? payload.is_valid ?? payload.ticket?.is_valid;
+    if (explicit === true) return true;
+    if (explicit === false) return false;
+    const statusValue = String(
+      payload.ticket?.status || payload.status || ""
+    ).toLowerCase();
+    const invalidTokens = [
+      "invalid",
+      "expired",
+      "rejected",
+      "refused",
+      "canceled",
+      "cancelled",
+      "used",
+      "already"
+    ];
+    const validTokens = ["valid", "checked", "accepted", "success", "ok"];
+    if (invalidTokens.some((token) => statusValue.includes(token))) {
+      return false;
+    }
+    if (validTokens.some((token) => statusValue.includes(token))) {
+      return true;
+    }
+    return true;
+  };
+
+  const playScanTone = (isValid) => {
+    if (typeof window === "undefined") return;
+    try {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      const context = new AudioContext();
+      const oscillator = context.createOscillator();
+      const gainNode = context.createGain();
+      oscillator.type = "sine";
+      oscillator.frequency.value = isValid ? 880 : 220;
+      gainNode.gain.value = 0.12;
+      oscillator.connect(gainNode);
+      gainNode.connect(context.destination);
+      oscillator.start();
+      oscillator.stop(context.currentTime + 0.2);
+      oscillator.onended = () => context.close();
+    } catch {
+      // Ignore audio errors (autoplay policies, etc.).
+    }
+  };
+
+  const handleAcceptRequest = async (requestId) => {
+    if (requestActionState.type) return;
+    setRequestActionState({ type: "accept", id: requestId });
+    setRequestsError("");
+    try {
+      await apiRequest(`offer-requests/${requestId}/accept`, {
+        method: "POST"
+      });
+      await Promise.all([loadOffer(), loadRequests()]);
+    } catch (error) {
+      setRequestsError(error?.message || t("general.error_has_occurred"));
+    } finally {
+      setRequestActionState({ type: "", id: null });
+    }
+  };
+
+  const handleRejectRequest = async (requestId) => {
+    if (requestActionState.type) return;
+    setRequestActionState({ type: "reject", id: requestId });
+    setRequestsError("");
+    try {
+      await apiRequest(`offer-requests/${requestId}`, { method: "DELETE" });
+      await Promise.all([loadOffer(), loadRequests()]);
+    } catch (error) {
+      setRequestsError(error?.message || t("general.error_has_occurred"));
+    } finally {
+      setRequestActionState({ type: "", id: null });
+    }
   };
 
   const handlePublish = async () => {
@@ -499,7 +763,7 @@ export default function MyOfferDetailsPage() {
     const override =
       typeof tokenOverride === "string" ? tokenOverride : "";
     const value = normalizeTicketToken(override || scanToken).trim();
-    if (!value || scanBusy) return;
+    if (!value || scanBusy || isScanResultOpen) return;
     if (override) {
       setScanToken(value);
     }
@@ -509,18 +773,36 @@ export default function MyOfferDetailsPage() {
     try {
       const payload = await apiRequest("tickets/scan", {
         method: "POST",
-        body: { token: value }
+        body: { token: value, offer_id: offer?.id ?? params.id }
       });
       setScanResult(payload || null);
+      setScanResultOpen(true);
+      playScanTone(resolveScanValidity(payload));
       if (payload?.ticket?.id && payload?.user) {
         loadCheckins();
       }
     } catch (error) {
       setScanError(error?.message || t("ticket_scan_failed"));
+      setScanResultOpen(true);
+      playScanTone(false);
     } finally {
       setScanBusy(false);
     }
   };
+
+  const handleCloseScanResult = () => {
+    setScanResultOpen(false);
+    setScanResult(null);
+    setScanError("");
+  };
+
+  const scanValidity = resolveScanValidity(scanResult, scanError);
+  const scanToneClass =
+    scanValidity === false
+      ? "border-danger-500/30 bg-danger-100"
+      : "border-success-500/30 bg-success-100";
+  const scanTextClass =
+    scanValidity === false ? "text-danger-700" : "text-success-700";
 
   return (
     <div className="space-y-6">
@@ -547,37 +829,39 @@ export default function MyOfferDetailsPage() {
             <h1 className="text-2xl font-semibold text-primary-900 md:text-3xl">
               {offer.title}
             </h1>
-            <p className="text-sm text-secondary-400">
-              {offer.city?.name || "-"} {offer.start_date ? t("Start date") : ""}{" "}
-              {offer.start_date || ""}
-            </p>
+            <div className="text-sm text-secondary-400">
+              <p>{offer.city?.name || "-"}</p>
+              <p>{formatHeaderDate(offer.start_date)}</p>
+            </div>
           </div>
         </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-[1.1fr_0.9fr]">
         <section className="space-y-6">
-          <div className="rounded-3xl border border-[#EADAF1] bg-white p-2">
-            <div className="flex gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible">
-              {ownerTabs.map((tab) => {
-                const isActive = ownerTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => setOwnerTab(tab.id)}
-                    className={`shrink-0 rounded-full px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] transition sm:flex-1 sm:px-4 sm:text-xs sm:tracking-[0.2em] ${
-                      isActive
-                        ? "bg-primary-600 text-white shadow-sm"
-                        : "text-secondary-500 hover:text-primary-700"
-                    }`}
-                  >
-                    {tab.label}
-                  </button>
-                );
-              })}
+          {isPublishedOffer ? (
+            <div className="rounded-3xl border border-[#EADAF1] bg-white p-2">
+              <div className="hide-scrollbar flex flex-nowrap gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible">
+                {ownerTabs.map((tab) => {
+                  const isActive = ownerTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => handleTabChange(tab.id)}
+                      className={`shrink-0 rounded-full px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] transition sm:flex-1 sm:px-4 sm:text-xs sm:tracking-[0.2em] ${
+                        isActive
+                          ? "bg-secondary-500 text-white shadow-sm"
+                          : "text-secondary-500 hover:text-secondary-600"
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          ) : null}
 
           {ownerTab === "overview" ? (
             <>
@@ -594,7 +878,7 @@ export default function MyOfferDetailsPage() {
                     dynamicEntries.map(([key, value]) => (
                       <span
                         key={key}
-                        className="rounded-full bg-primary-600/10 px-3 py-2 text-xs font-semibold text-primary-900"
+                        className="rounded-full border border-secondary-500/40 bg-white px-3 py-2 text-xs font-semibold text-secondary-500"
                       >
                         {value}
                       </span>
@@ -618,7 +902,7 @@ export default function MyOfferDetailsPage() {
             </>
           ) : null}
 
-          {ownerTab === "participants" ? (
+          {ownerTab === "participants" && isPublishedOffer ? (
             <>
               <div className="rounded-3xl border border-[#EADAF1] bg-white p-5">
                 <div className="flex flex-wrap items-center justify-between gap-3">
@@ -635,29 +919,29 @@ export default function MyOfferDetailsPage() {
                     lastItemText={participantsText}
                   />
                 </div>
-                <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                  <div className="rounded-2xl bg-[#F7F1FA] p-3">
+                  <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-2xl bg-secondary-500/10 p-3">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-secondary-500">
                       {t("Participants")}
                     </p>
-                    <p className="mt-2 text-lg font-semibold text-primary-900">
-                      {offer.participants_count || 0}
+                    <p className="mt-2 text-lg font-semibold text-secondary-700">
+                      {participantsCount}
                     </p>
                   </div>
-                  <div className="rounded-2xl bg-[#FFF5E5] p-3">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#D59500]">
+                  <div className="rounded-2xl bg-[#D59500]/10 p-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#B88400]">
                       {t("Pending")}
                     </p>
-                    <p className="mt-2 text-lg font-semibold text-[#9B6400]">
+                    <p className="mt-2 text-lg font-semibold text-[#B88400]">
                       {pendingCount}
                     </p>
                   </div>
-                  <div className="rounded-2xl bg-[#F7F1FA] p-3">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-secondary-500">
+                  <div className="rounded-2xl bg-success-500/10 p-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-success-700">
                       {t("ticket_checked_in_count")}
                     </p>
-                    <p className="mt-2 text-lg font-semibold text-primary-900">
-                      {checkedInCount}
+                    <p className="mt-2 text-lg font-semibold text-success-700">
+                      {presentCount}
                     </p>
                   </div>
                 </div>
@@ -665,16 +949,20 @@ export default function MyOfferDetailsPage() {
                   <button
                     type="button"
                     onClick={() => setParticipantsOpen(true)}
-                    className="inline-flex items-center rounded-full bg-primary-600 px-4 py-2 text-xs font-semibold text-white"
+                    className="inline-flex items-center rounded-full bg-secondary-500 px-4 py-2 text-xs font-semibold text-white"
                   >
                     {t("Participants information")}
                   </button>
                   {pendingCount ? (
-                    <span className="inline-flex items-center rounded-full bg-[#D59500] px-4 py-2 text-xs font-semibold text-white">
+                    <button
+                      type="button"
+                      onClick={() => setRequestsOpen(true)}
+                      className="inline-flex items-center rounded-full bg-[#D59500] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#C88600]"
+                    >
                       {t("Participation requests")}: {pendingCount}
-                    </span>
+                    </button>
                   ) : (
-                    <span className="inline-flex items-center rounded-full bg-[#F7F1FA] px-4 py-2 text-xs font-semibold text-secondary-600">
+                    <span className="inline-flex items-center rounded-full border border-secondary-500/40 bg-white px-4 py-2 text-xs font-semibold text-secondary-500">
                       {t("No requests")}
                     </span>
                   )}
@@ -733,7 +1021,7 @@ export default function MyOfferDetailsPage() {
             </>
           ) : null}
 
-          {ownerTab === "checkin" ? (
+          {ownerTab === "checkin" && isPublishedOffer && isActiveOffer ? (
             <>
               <div className="rounded-3xl border border-[#EADAF1] bg-white p-5">
                 <div className="flex flex-wrap items-center justify-between gap-3">
@@ -754,28 +1042,28 @@ export default function MyOfferDetailsPage() {
                   />
                 </div>
                 <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                  <div className="rounded-2xl bg-[#F7F1FA] p-3">
+                  <div className="rounded-2xl bg-secondary-500/10 p-3">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-secondary-500">
                       {t("Participants")}
                     </p>
-                    <p className="mt-2 text-lg font-semibold text-primary-900">
-                      {offer.participants_count || 0}
+                    <p className="mt-2 text-lg font-semibold text-secondary-700">
+                      {participantsCount}
                     </p>
                   </div>
-                  <div className="rounded-2xl bg-[#FFF5E5] p-3">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#D59500]">
+                  <div className="rounded-2xl bg-[#D59500]/10 p-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#B88400]">
                       {t("Pending")}
                     </p>
-                    <p className="mt-2 text-lg font-semibold text-[#9B6400]">
+                    <p className="mt-2 text-lg font-semibold text-[#B88400]">
                       {pendingCount}
                     </p>
                   </div>
-                  <div className="rounded-2xl bg-[#F7F1FA] p-3">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-secondary-500">
+                  <div className="rounded-2xl bg-success-500/10 p-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-success-700">
                       {t("ticket_checked_in_count")}
                     </p>
-                    <p className="mt-2 text-lg font-semibold text-primary-900">
-                      {checkedInCount}
+                    <p className="mt-2 text-lg font-semibold text-success-700">
+                      {presentCount}
                     </p>
                   </div>
                 </div>
@@ -783,7 +1071,7 @@ export default function MyOfferDetailsPage() {
                   <p className="mt-3 text-xs text-danger-600">{scanError}</p>
                 ) : null}
                 {scanResult?.ticket && scanResult?.user ? (
-                  <div className="mt-4 rounded-2xl border border-[#EADAF1] bg-[#F7F1FA] p-3">
+                  <div className={`mt-4 rounded-2xl border p-3 ${scanToneClass}`}>
                     <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-secondary-500">
                       {t("ticket_scan_result")}
                     </p>
@@ -795,7 +1083,7 @@ export default function MyOfferDetailsPage() {
                         </p>
                         <p className="text-xs text-secondary-500">
                           {t("ticket_scan_status")}{" "}
-                          <span className="font-semibold text-primary-700">
+                          <span className={`font-semibold ${scanTextClass}`}>
                             {scanResult.ticket.status}
                           </span>
                         </p>
@@ -804,14 +1092,14 @@ export default function MyOfferDetailsPage() {
                     <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-secondary-500">
                       <span>
                         {t("ticket_scan_count")}:{" "}
-                        <span className="font-semibold text-primary-700">
+                        <span className={`font-semibold ${scanTextClass}`}>
                           {scanResult.ticket.scan_count}
                         </span>
                       </span>
                       {scanResult.ticket.checked_in_at ? (
                         <span>
                           {t("ticket_scan_time")}:{" "}
-                          <span className="font-semibold text-primary-700">
+                          <span className={`font-semibold ${scanTextClass}`}>
                             {new Date(
                               scanResult.ticket.checked_in_at
                             ).toLocaleString()}
@@ -829,7 +1117,7 @@ export default function MyOfferDetailsPage() {
                     {t("ticket_checkins_title")}
                   </h3>
                   <span className="text-xs text-secondary-400">
-                    {checkedInCount}
+                    {presentCount}
                   </span>
                 </div>
                 <div className="mt-4 space-y-3">
@@ -1025,16 +1313,145 @@ export default function MyOfferDetailsPage() {
           </div>
         </div>
 
-        <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+        <div className="mt-4 flex flex-col gap-3">
+          <Link
+            href={`/app/auth/my-offers/${offer.id}/participants`}
+            className="w-full"
+          >
+            <Button label={t("Participants information")} className="w-full" />
+          </Link>
           <Button
             variant="outline"
             label={t("Close")}
             className="w-full"
             onClick={() => setParticipantsOpen(false)}
           />
-          <Link href={`/app/auth/my-offers/${offer.id}/participants`} className="w-full">
-            <Button label={t("Participants information")} className="w-full" />
+        </div>
+      </Modal>
+
+      <Modal
+        open={isRequestsOpen}
+        title={t("Participation requests")}
+        onClose={() => setRequestsOpen(false)}
+      >
+        <div className="max-h-[70vh] space-y-4 overflow-y-auto pr-2">
+          {requestsStatus === "loading" ? (
+            <div className="space-y-3">
+              {Array.from({ length: 2 }).map((_, index) => (
+                <div
+                  key={`request-skeleton-${index}`}
+                  className="h-20 animate-pulse rounded-2xl bg-neutral-100"
+                />
+              ))}
+            </div>
+          ) : null}
+
+          {requestsError ? (
+            <p className="text-sm text-danger-600">{requestsError}</p>
+          ) : null}
+
+          {requestsStatus !== "loading" ? (
+            requests.length === 0 ? (
+              <p className="text-sm text-secondary-400">
+                {t("No requests yet")}
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {requests.map((request) => {
+                  const user = request.user;
+                  const isBusy =
+                    requestActionState.id === request.id &&
+                    ["accept", "reject"].includes(requestActionState.type);
+                  const isAccepting =
+                    isBusy && requestActionState.type === "accept";
+                  const isRejecting =
+                    isBusy && requestActionState.type === "reject";
+                  return (
+                    <div
+                      key={request.id}
+                      className="rounded-2xl border border-[#EADAF1] bg-white p-4"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <Link
+                          href={`/app/auth/users/${user.id}`}
+                          className="flex min-w-0 items-center gap-3"
+                        >
+                          <UserAvatar user={user} size={52} withBorder />
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-primary-900">
+                              {user.first_name} {user.last_name}
+                            </p>
+                            <p className="text-xs text-secondary-400">
+                              {getAge(user)
+                                ? t("years_old", { count: getAge(user) })
+                                : ""}
+                            </p>
+                          </div>
+                        </Link>
+                        <div className="flex shrink-0 items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleAcceptRequest(request.id)}
+                            disabled={isBusy}
+                            aria-label={t("Accepted")}
+                            className="flex h-9 w-9 items-center justify-center rounded-full bg-success-600 text-white shadow-sm transition hover:bg-success-700 disabled:opacity-60"
+                          >
+                            {isAccepting ? (
+                              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                            ) : (
+                              <CheckIcon
+                                size={18}
+                                className="text-white"
+                              />
+                            )}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRejectRequest(request.id)}
+                            disabled={isBusy}
+                            aria-label={t("Decline participant")}
+                            className="flex h-9 w-9 items-center justify-center rounded-full bg-danger-600 text-white shadow-sm transition hover:bg-danger-700 disabled:opacity-60"
+                          >
+                            {isRejecting ? (
+                              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                            ) : (
+                              <XMarkIcon
+                                size={18}
+                                className="text-white"
+                              />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                      {request.message ? (
+                        <p className="mt-3 text-xs text-secondary-500">
+                          {request.message}
+                        </p>
+                      ) : null}
+                      <p className="mt-2 text-[11px] text-secondary-400">
+                        {formatRequestDate(request.created_at)}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            )
+          ) : null}
+        </div>
+
+        <div className="mt-4 flex flex-col gap-3">
+          <Link
+            href={`/app/auth/my-offers/${offer.id}/participants`}
+            className="w-full"
+          >
+            <Button label={t("Details")} className="w-full" />
           </Link>
+          <Button
+            variant="outline"
+            label={t("Close")}
+            className="w-full"
+            onClick={() => setRequestsOpen(false)}
+          />
         </div>
       </Modal>
 
@@ -1134,13 +1551,68 @@ export default function MyOfferDetailsPage() {
         onClose={() => setScannerOpen(false)}
       >
         <div className="space-y-4">
-          <div className="overflow-hidden rounded-3xl border border-[#EADAF1] bg-black">
+          <div className="relative overflow-hidden rounded-3xl border border-[#EADAF1] bg-black">
             <video
               ref={scanVideoRef}
               className="h-64 w-full object-cover"
               playsInline
               muted
             />
+            {isScanResultOpen ? (
+              <div className="absolute inset-0 flex items-start justify-center bg-black/40 p-3">
+                <div className={`w-full max-w-sm rounded-2xl border p-4 shadow-lg ${scanToneClass}`}>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-secondary-500">
+                    {t("ticket_scan_result")}
+                  </p>
+                  {scanResult?.ticket && scanResult?.user ? (
+                    <>
+                      <div className="mt-3 flex items-center gap-3">
+                        <UserAvatar user={scanResult.user} size={48} withBorder />
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-primary-900">
+                            {scanResult.user.name ||
+                              `${scanResult.user.first_name || ""} ${scanResult.user.last_name || ""}`.trim()}
+                          </p>
+                          <p className="text-xs text-secondary-500">
+                            {t("ticket_scan_status")}{" "}
+                            <span className={`font-semibold ${scanTextClass}`}>
+                              {scanResult.ticket.status}
+                            </span>
+                          </p>
+                        </div>
+                      </div>
+                      <div className="mt-3 space-y-1 text-xs text-secondary-500">
+                        <p>
+                          {t("ticket_scan_count")}:{" "}
+                          <span className={`font-semibold ${scanTextClass}`}>
+                            {scanResult.ticket.scan_count}
+                          </span>
+                        </p>
+                        <p>
+                          {t("ticket_scan_time")}:{" "}
+                          <span className={`font-semibold ${scanTextClass}`}>
+                            {formatScanDateTime(
+                              scanResult.ticket.first_checked_in_at ||
+                                scanResult.ticket.checked_in_at
+                            )}
+                          </span>
+                        </p>
+                      </div>
+                    </>
+                  ) : (
+                    <p className={`mt-3 text-sm font-semibold ${scanTextClass}`}>
+                      {scanError || t("ticket_scan_failed")}
+                    </p>
+                  )}
+                  <Button
+                    variant="outline"
+                    label={t("Close")}
+                    className="mt-4 w-full"
+                    onClick={handleCloseScanResult}
+                  />
+                </div>
+              </div>
+            ) : null}
           </div>
           <p className="text-xs text-secondary-500">
             {t("ticket_scan_camera_hint")}

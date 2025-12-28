@@ -10,6 +10,7 @@ import UsersAvatarsList from "../user/users-avatars-list";
 import Modal from "../ui/modal";
 import Button from "../ui/button";
 import { useI18n } from "../i18n-provider";
+import { UserPlusIcon } from "../ui/heroicons";
 import { apiRequest } from "../../app/lib/api-client";
 
 const HeartIcon = ({ filled }) => (
@@ -26,6 +27,34 @@ const HeartIcon = ({ filled }) => (
     <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8Z" />
   </svg>
 );
+
+const combineDateAndTime = (date, time) => {
+  if (!date) return null;
+  const normalizedTime = time ? time.split(":").slice(0, 2).join(":") : "00:00";
+  const dateTime = new Date(`${date}T${normalizedTime}`);
+  if (Number.isNaN(dateTime.getTime())) return null;
+  return dateTime;
+};
+
+const formatTimeRemaining = (milliseconds, t) => {
+  const seconds = Math.max(Math.floor(milliseconds / 1000), 0);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+
+  const daysUnit = t("time_units.days");
+  const hoursUnit = t("time_units.hours");
+  const minutesUnit = t("time_units.minutes");
+
+  const remainingHours = hours % 24;
+  const displayMinutes = minutes % 60;
+
+  if (days > 0) {
+    return `${days}${daysUnit} ${remainingHours}${hoursUnit} ${displayMinutes}${minutesUnit}`;
+  }
+
+  return `${hours}${hoursUnit} ${displayMinutes}${minutesUnit}`;
+};
 
 export default function OfferCard({ offer, currentUserId }) {
   const pathname = usePathname();
@@ -46,6 +75,8 @@ export default function OfferCard({ offer, currentUserId }) {
   const [isParticipant, setIsParticipant] = useState(
     Boolean(offer?.auth_user_is_participant)
   );
+  const [now, setNow] = useState(() => Date.now());
+  const isClosed = Boolean(offer?.is_closed) || offer?.status === "closed";
 
   useEffect(() => {
     setIsFavorite(Boolean(offer?.auth_user_is_favorite));
@@ -53,6 +84,22 @@ export default function OfferCard({ offer, currentUserId }) {
     setIsPending(Boolean(offer?.auth_user_is_pending_participant));
     setIsParticipant(Boolean(offer?.auth_user_is_participant));
   }, [offer]);
+
+  useEffect(() => {
+    if (!offer?.start_date) return undefined;
+    if (
+      isClosed ||
+      offer?.is_draft ||
+      offer?.status === "draft" ||
+      offer?.status === "pending"
+    ) {
+      return undefined;
+    }
+    const startDateTime = combineDateAndTime(offer.start_date, offer.start_time);
+    if (!startDateTime) return undefined;
+    const interval = setInterval(() => setNow(Date.now()), 60000);
+    return () => clearInterval(interval);
+  }, [offer?.start_date, offer?.start_time, offer?.status, offer?.is_draft, isClosed]);
 
   const ownerFullName = useMemo(() => {
     if (!offer?.owner) return "-";
@@ -74,10 +121,10 @@ export default function OfferCard({ offer, currentUserId }) {
 
   const categoryLabel = offer?.category?.name || t("Groops");
   const isOwner = offer?.owner?.id === currentUserId;
-  const isClosed = Boolean(offer?.is_closed) || offer?.status === "closed";
   const isOffersContext =
     pathname === "/app/auth/drawer/tabs" ||
     pathname?.startsWith("/app/auth/offers");
+  const pendingCount = offer?.pending_participants_count ?? 0;
   const isOfferPending = offer?.status === "pending";
   const participantStatus = !isOwner && isParticipant;
   const pendingStatus = !isOwner && isPending;
@@ -97,12 +144,42 @@ export default function OfferCard({ offer, currentUserId }) {
     if (isClosed) return "bg-secondary-400 text-white";
     if (isOfferPending) return "bg-[#D59500] text-white";
     if (pendingStatus) return "bg-[#D59500] text-white";
-    if (participantStatus) return "bg-primary-600 text-white";
+    if (participantStatus) return "bg-secondary-500 text-white";
     return "bg-secondary-500 text-white";
   })();
+  const isActiveStatus = statusLabel === t("Actives");
   const isRequestDisabled =
     isOwner || isParticipant || isPending || isClosed || actionState !== "idle";
   const showActionButton = !isOwner && !isParticipant && !isPending && !isClosed;
+  const startsInLabel = useMemo(() => {
+    if (!offer?.start_date) return "";
+    if (
+      isClosed ||
+      offer?.is_draft ||
+      offer?.status === "draft" ||
+      offer?.status === "pending"
+    ) {
+      return "";
+    }
+    const startDateTime = combineDateAndTime(offer.start_date, offer.start_time);
+    if (!startDateTime) return "";
+    const diffMs = startDateTime.getTime() - now;
+    if (diffMs > 0) {
+      const formattedTime = formatTimeRemaining(diffMs, t);
+      return t("starts_in_time", { time: formattedTime });
+    }
+    const startedSince = formatTimeRemaining(Math.abs(diffMs), t);
+    return t("started_since_time", { time: startedSince });
+  }, [
+    offer?.start_date,
+    offer?.start_time,
+    offer?.status,
+    offer?.is_draft,
+    isClosed,
+    now,
+    t
+  ]);
+  const showStartsIn = Boolean(startsInLabel);
 
   const href =
     offer?.owner?.id === currentUserId
@@ -158,7 +235,7 @@ export default function OfferCard({ offer, currentUserId }) {
     <>
       <Link
         href={href}
-        className="group flex h-full flex-col overflow-hidden rounded-3xl border border-[#EADAF1] bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+        className="group flex w-full flex-col overflow-hidden rounded-3xl border border-[#EADAF1] bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
       >
         <div className="relative h-36">
           {backgroundUrl ? (
@@ -179,7 +256,13 @@ export default function OfferCard({ offer, currentUserId }) {
             </h3>
           </div>
           <div className="absolute right-4 top-4 flex items-center gap-2">
-            {isOffersContext ? (
+            {isOwner && pendingCount > 0 && !isClosed ? (
+              <span className="flex items-center gap-1 rounded-full bg-secondary-500 px-2 py-1 text-[10px] font-semibold text-white shadow-sm">
+                <UserPlusIcon size={12} className="text-white" />
+                {pendingCount > 99 ? "99" : pendingCount}
+              </span>
+            ) : null}
+            {isOffersContext && !isActiveStatus ? (
               <span
                 className={`whitespace-nowrap rounded-full px-3 py-1 text-[10px] font-semibold ${statusTone}`}
               >
@@ -203,22 +286,41 @@ export default function OfferCard({ offer, currentUserId }) {
         </div>
 
         <div className="flex flex-1 flex-col gap-4 px-4 pb-4 pt-3">
-          <div className="flex items-center gap-3">
-            <UserAvatar user={offer.owner} size={52} withBorder />
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-primary-900">
-                {ownerFullName}
-              </p>
-              <div className="mt-1 min-h-[28px]">
-                <UsersAvatarsList
-                  users={offer.participants || []}
-                  lastItemText={participantsText}
-                />
+          <div className="space-y-2">
+            <div className="flex items-start gap-3">
+              <div className="flex flex-col items-center">
+                <UserAvatar user={offer.owner} size={52} withBorder />
+                {offer?.owner?.age ? (
+                  <span className="mt-1 text-[11px] text-secondary-400">
+                    {t("years_old", { count: offer.owner.age })}
+                  </span>
+                ) : null}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-primary-900">
+                  {ownerFullName}
+                </p>
+                <div className="mt-1 min-h-[28px]">
+                  <UsersAvatarsList
+                    users={offer.participants || []}
+                    lastItemText={participantsText}
+                  />
+                </div>
               </div>
             </div>
+            {showStartsIn ? (
+              <div className="self-start">
+                <span
+                  className="inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold text-white"
+                  style={{ backgroundColor: "rgb(35, 19, 106)" }}
+                >
+                  {startsInLabel}
+                </span>
+              </div>
+            ) : null}
           </div>
 
-          <div className="mt-auto space-y-3">
+          <div className="space-y-3">
             <OfferMainDetails offer={offer} />
 
             {showActionButton ? (
@@ -227,7 +329,7 @@ export default function OfferCard({ offer, currentUserId }) {
                   type="button"
                   onClick={handleOpenRequest}
                   disabled={isRequestDisabled}
-                  className={`rounded-full px-4 py-2 text-[10px] font-semibold transition ${
+                  className={`w-2/3 rounded-full px-4 py-2.5 text-xs font-semibold transition ${
                     isRequestDisabled
                       ? "bg-[#EADAF1] text-secondary-400"
                       : "bg-gradient-to-r from-primary-500 via-[#822485] to-secondary-500 text-white"

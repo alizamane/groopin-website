@@ -16,6 +16,9 @@ export default function UserAvatar({ user, size = 60, withBorder = false }) {
     user?.profile_image;
   const initials =
     (user?.first_name?.[0] || "U") + (user?.last_name?.[0] || "");
+  const safeAvatarUrl = avatarUrl?.includes("ui-avatars.com/api")
+    ? `${avatarUrl}${avatarUrl.includes("?") ? "&" : "?"}format=png`
+    : avatarUrl;
 
   if (isDefaultAvatar || !avatarUrl) {
     return (
@@ -42,7 +45,7 @@ export default function UserAvatar({ user, size = 60, withBorder = false }) {
       style={{ width: size, height: size }}
     >
       <Image
-        src={avatarUrl}
+        src={safeAvatarUrl}
         alt={user.name || "User avatar"}
         width={size}
         height={size}

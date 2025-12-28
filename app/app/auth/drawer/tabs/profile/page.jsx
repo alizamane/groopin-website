@@ -251,7 +251,7 @@ export default function ProfilePage() {
                 {t("nothingToShow")}
               </p>
             ) : (
-              <div className="grid auto-rows-fr items-stretch gap-5 md:grid-cols-2">
+              <div className="grid gap-5 md:grid-cols-2">
                 {createdOffers.map((offer) => (
                   <OfferCard
                     key={offer.id}
@@ -272,7 +272,7 @@ export default function ProfilePage() {
                 {t("nothingToShow")}
               </p>
             ) : (
-              <div className="grid auto-rows-fr items-stretch gap-5 md:grid-cols-2">
+              <div className="grid gap-5 md:grid-cols-2">
                 {participatedOffers.map((offer) => (
                   <OfferCard
                     key={offer.id}

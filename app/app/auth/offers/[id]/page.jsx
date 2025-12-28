@@ -32,6 +32,22 @@ const HeartIcon = ({ filled }) => (
   </svg>
 );
 
+const RatingStarIcon = ({ filled }) => (
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill={filled ? "#B12587" : "none"}
+    stroke="#B12587"
+    strokeWidth="1.6"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M12 3.5 14.8 9l5.9.9-4.3 4.2 1 5.8L12 17.8 6.6 19.9l1-5.8-4.3-4.2L9.2 9 12 3.5Z" />
+  </svg>
+);
+
 const drawRoundedRect = (ctx, x, y, width, height, radius) => {
   ctx.beginPath();
   ctx.moveTo(x + radius, y);
@@ -58,7 +74,7 @@ const loadImage = (src) =>
 export default function OfferDetailsPage() {
   const params = useParams();
   const router = useRouter();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [offer, setOffer] = useState(null);
   const [status, setStatus] = useState("loading");
   const [actionState, setActionState] = useState("idle");
@@ -279,6 +295,14 @@ export default function OfferDetailsPage() {
   const isParticipant = Boolean(offer?.auth_user_is_participant);
   const isPending = Boolean(offer?.auth_user_is_pending_participant);
   const isClosed = Boolean(offer?.is_closed) || offer?.status === "closed";
+  const isActiveOffer = Boolean(
+    offer &&
+      offer.status === "active" &&
+      !offer.is_draft &&
+      !offer.is_closed
+  );
+  const ownerRating = Number(offer?.owner?.average_rating ?? offer?.owner?.rating ?? null);
+  const showOwnerRating = Number.isFinite(ownerRating) && ownerRating > 0;
   const isActionDisabled = isOwner || isParticipant || isPending || isClosed;
   const actionLabel = isOwner
     ? t("My offer")
@@ -325,10 +349,34 @@ export default function OfferDetailsPage() {
   const cardBase = "rounded-3xl border border-[#EADAF1] bg-white p-5";
   const sectionTitle =
     "text-sm font-semibold uppercase tracking-[0.2em] text-primary-700";
+  const headerDateLocale =
+    locale === "fr" ? "fr-FR" : locale === "ar" ? "ar-MA" : "en-GB";
+  const formatShortToken = (date, formatLocale, options) => {
+    const value = new Intl.DateTimeFormat(formatLocale, options).format(date);
+    const normalized = value.replace(/\./g, "").trim().slice(0, 3);
+    if (!normalized) return value;
+    const capitalized =
+      normalized.charAt(0).toUpperCase() + normalized.slice(1).toLowerCase();
+    return `${capitalized}.`;
+  };
+  const formatHeaderDate = (value) => {
+    if (!value) return "-";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    const weekday = formatShortToken(date, headerDateLocale, { weekday: "short" });
+    const dayNumber = new Intl.DateTimeFormat(headerDateLocale, {
+      day: "numeric"
+    }).format(date);
+    const month = formatShortToken(date, headerDateLocale, { month: "short" });
+    const year = new Intl.DateTimeFormat(headerDateLocale, {
+      year: "numeric"
+    }).format(date);
+    return `${weekday} ${dayNumber} ${month} ${year}`;
+  };
   const userStatusLabel = isOwner
     ? t("Organizer")
     : isParticipant
-      ? t("Participating")
+      ? t("request_accepted")
       : isPending
         ? t("Pending")
         : isClosed
@@ -336,7 +384,7 @@ export default function OfferDetailsPage() {
           : t("In Progress");
   const stats = [
     { label: t("Favorites"), value: favoriteCount || 0 },
-    { label: "Status", value: statusLabel }
+    { label: t("offer_status_label"), value: statusLabel }
   ];
   const showRequestButton =
     !isParticipant && !isPending && !isClosed && !isOwner;
@@ -652,7 +700,7 @@ export default function OfferDetailsPage() {
     try {
       const payload = await apiRequest("tickets/scan", {
         method: "POST",
-        body: { token: value }
+        body: { token: value, offer_id: offer?.id ?? params.id }
       });
       setScanResult(payload || null);
     } catch (error) {
@@ -688,10 +736,10 @@ export default function OfferDetailsPage() {
               <h1 className="text-2xl font-semibold text-primary-900 md:text-3xl">
                 {offer.title}
               </h1>
-              <p className="text-sm text-secondary-400">
-                {offer.city?.name || "-"} {offer.start_date ? t("Start date") : ""}{" "}
-                {offer.start_date || ""}
-              </p>
+              <div className="text-sm text-secondary-400">
+                <p>{offer.city?.name || "-"}</p>
+                <p>{formatHeaderDate(offer.start_date)}</p>
+              </div>
               <div className="flex flex-wrap gap-2">
                 {isPending ? (
                   <span className="rounded-full bg-[#D59500] px-3 py-1 text-xs font-semibold text-white">
@@ -699,8 +747,8 @@ export default function OfferDetailsPage() {
                   </span>
                 ) : null}
                 {isParticipant && !isClosed ? (
-                  <span className="rounded-full bg-primary-600 px-3 py-1 text-xs font-semibold text-white">
-                    {t("Participating")}
+                  <span className="rounded-full bg-secondary-500 px-3 py-1 text-xs font-semibold text-white">
+                    {t("request_accepted")}
                   </span>
                 ) : null}
                 {isClosed ? (
@@ -711,17 +759,17 @@ export default function OfferDetailsPage() {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={handleToggleFavorite}
-                disabled={actionState === "favorite"}
-                aria-pressed={isFavorite}
-                className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${
-                  isFavorite
-                    ? "bg-primary-600 text-white"
-                    : "bg-white/90 text-primary-700"
-                }`}
-              >
+            <button
+              type="button"
+              onClick={handleToggleFavorite}
+              disabled={actionState === "favorite"}
+              aria-pressed={isFavorite}
+              className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${
+                isFavorite
+                  ? "bg-secondary-500 text-white"
+                  : "bg-white/90 text-secondary-500"
+              }`}
+            >
                 <HeartIcon filled={isFavorite} />
                 <span>{t("Favorites")}</span>
               </button>
@@ -763,6 +811,21 @@ export default function OfferDetailsPage() {
                     ? t("years_old", { count: offer.owner.age })
                     : ""}
                 </p>
+                {showOwnerRating ? (
+                  <div className="mt-2 flex items-center gap-2">
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: 5 }).map((_, index) => (
+                        <RatingStarIcon
+                          key={`owner-rating-${index}`}
+                          filled={index + 1 <= Math.round(ownerRating)}
+                        />
+                      ))}
+                    </div>
+                    <span className="text-xs text-secondary-500">
+                      {ownerRating.toFixed(1)}/5
+                    </span>
+                  </div>
+                ) : null}
               </div>
             </Link>
           </div>
@@ -770,8 +833,8 @@ export default function OfferDetailsPage() {
           {!isOwner ? (
             <div className={cardBase}>
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <h2 className={sectionTitle}>Your status</h2>
-                <span className="rounded-full bg-primary-600/10 px-3 py-1 text-xs font-semibold text-primary-900">
+                <h2 className={sectionTitle}>{t("request_status_title")}</h2>
+                <span className="rounded-full border border-secondary-500/40 bg-white px-3 py-1 text-xs font-semibold text-secondary-500">
                   {userStatusLabel}
                 </span>
               </div>
@@ -864,7 +927,7 @@ export default function OfferDetailsPage() {
                 <div className="mt-4 h-36 animate-pulse rounded-2xl bg-neutral-100" />
               ) : ticketToken ? (
                 <div className="mt-4 flex flex-col items-center gap-4">
-                  <div className="rounded-3xl border border-[#EADAF1] bg-white p-3">
+                  <div className="relative rounded-3xl border border-[#EADAF1] bg-white p-3">
                     <QrCodeCanvas
                       value={ticketToken}
                       size={200}
@@ -875,26 +938,15 @@ export default function OfferDetailsPage() {
                       ecc="H"
                       className="h-48 w-48"
                     />
-                  </div>
-                  <div className="w-full">
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-secondary-400">
-                      {t("ticket_code")}
-                    </p>
-                    <p className="mt-2 break-all rounded-2xl border border-[#EADAF1] bg-white px-3 py-2 text-xs font-medium text-primary-900">
-                      {ticketToken}
-                    </p>
-                    <Button
-                      variant="outline"
-                      label={t("ticket_copy")}
-                      size="sm"
-                      className="mt-3 w-full"
-                      onClick={handleCopyTicketToken}
-                    />
-                    {ticketFeedback ? (
-                      <p className="mt-2 text-xs text-primary-700">
-                        {ticketFeedback}
-                      </p>
-                    ) : null}
+                    <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-md">
+                        <img
+                          src="/assets/images/splash-icon.png"
+                          alt="Groopin"
+                          className="h-8 w-8 object-contain"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
               ) : (
@@ -908,9 +960,11 @@ export default function OfferDetailsPage() {
           <div className={cardBase}>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 className={sectionTitle}>{t("Details")}</h2>
-              <span className="rounded-full bg-primary-600/10 px-3 py-1 text-xs font-semibold text-primary-900">
-                {userStatusLabel}
-              </span>
+              {isOwner ? (
+                <span className="rounded-full bg-primary-600/10 px-3 py-1 text-xs font-semibold text-primary-900">
+                  {userStatusLabel}
+                </span>
+              ) : null}
             </div>
             <div className="mt-4">
               <OfferMainDetails offer={offer} />
@@ -933,7 +987,7 @@ export default function OfferDetailsPage() {
                     <button
                       type="button"
                       onClick={() => setParticipantsOpen(true)}
-                      className="mt-3 inline-flex items-center rounded-full bg-primary-600 px-3 py-2 text-[10px] font-semibold text-white"
+                      className="mt-3 inline-flex items-center rounded-full bg-secondary-500 px-3 py-2 text-[10px] font-semibold text-white"
                     >
                       {t("Participants information")}
                     </button>
@@ -975,7 +1029,7 @@ export default function OfferDetailsPage() {
                 dynamicEntries.map(([key, value]) => (
                   <span
                     key={key}
-                    className="rounded-full bg-primary-600/10 px-3 py-2 text-xs font-semibold text-primary-900"
+                    className="rounded-full border border-secondary-500/40 bg-white px-3 py-2 text-xs font-semibold text-secondary-500"
                   >
                     {value}
                   </span>
@@ -993,7 +1047,7 @@ export default function OfferDetailsPage() {
         <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
           <div className={cardBase}>
             <h3 className={sectionTitle}>Actions</h3>
-            <div className="mt-4 space-y-3">
+            <div className="mt-4 flex flex-wrap gap-3">
               <Button
                 label={t("share")}
                 size="sm"
@@ -1016,7 +1070,7 @@ export default function OfferDetailsPage() {
                 }}
               />
             </div>
-            {isOwner ? (
+            {isOwner && isActiveOffer ? (
               <div className="mt-5 rounded-2xl border border-[#EADAF1] bg-white p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary-700">

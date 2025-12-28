@@ -5,7 +5,63 @@ import { useRouter } from "next/navigation";
 
 import Button from "../../../../../components/ui/button";
 import Input from "../../../../../components/ui/input";
+import { useI18n } from "../../../../../components/i18n-provider";
 import { apiRequest } from "../../../../lib/api-client";
+
+const ioniconCache = new Map();
+
+const normalizeIoniconName = (name) => {
+  if (!name) return "";
+  return String(name).replace(/^(ios|md)-/, "");
+};
+
+const Ionicon = ({ name, size = 16, className = "" }) => {
+  const normalized = normalizeIoniconName(name);
+  const cacheKey = `${normalized}:${size}`;
+  const [svgMarkup, setSvgMarkup] = useState(() => {
+    return ioniconCache.get(cacheKey) || "";
+  });
+
+  useEffect(() => {
+    if (!normalized) return;
+    if (ioniconCache.has(cacheKey)) {
+      setSvgMarkup(ioniconCache.get(cacheKey));
+      return;
+    }
+
+    fetch(`https://unpkg.com/ionicons@5.5.2/dist/svg/${normalized}.svg`)
+      .then((response) => (response.ok ? response.text() : ""))
+      .then((rawSvg) => {
+        if (!rawSvg) return;
+        const sizedSvg = rawSvg.replace(
+          "<svg ",
+          `<svg width="${size}" height="${size}" `
+        );
+        ioniconCache.set(cacheKey, sizedSvg);
+        setSvgMarkup(sizedSvg);
+      })
+      .catch(() => {
+        // Ignore icon fetch errors and keep fallback.
+      });
+  }, [cacheKey, normalized, size]);
+
+  if (!normalized) return null;
+
+  return (
+    <span
+      className={`inline-flex items-center justify-center ${className}`}
+      style={{ width: size, height: size }}
+      aria-hidden="true"
+      dangerouslySetInnerHTML={{ __html: svgMarkup || "" }}
+    />
+  );
+};
+
+const renderRequiredLabel = (label) => (
+  <span>
+    {label} <span className="text-danger-600">*</span>
+  </span>
+);
 
 const normalizeFieldError = (errors, field) => {
   const value = errors?.[field];
@@ -15,6 +71,7 @@ const normalizeFieldError = (errors, field) => {
 
 export default function CreateOfferPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const [categories, setCategories] = useState([]);
   const [cities, setCities] = useState([]);
   const [dynamicQuestions, setDynamicQuestions] = useState([]);
@@ -53,9 +110,9 @@ export default function CreateOfferPage() {
       })
       .catch(() => {
         setStatus("error");
-        setMessage("Unable to load offer form data.");
+        setMessage(t("general.error_has_occurred"));
       });
-  }, []);
+  }, [t]);
 
   const selectedCategory = useMemo(() => {
     const categoryId = Number(formValues.category_id || 0);
@@ -95,6 +152,7 @@ export default function CreateOfferPage() {
     } else {
       setIsPublishing(true);
     }
+    let shouldResetLoading = true;
 
     const cleanedDynamicQuestions = Object.fromEntries(
       Object.entries(formValues.dynamic_questions || {}).filter(
@@ -134,7 +192,8 @@ export default function CreateOfferPage() {
       }
 
       if (isDraft) {
-        setMessage("Draft saved.");
+        setMessage(t("offers.draft_success"));
+        shouldResetLoading = false;
         router.push("/app/auth/drawer/tabs/my-offers");
         return;
       }
@@ -143,22 +202,27 @@ export default function CreateOfferPage() {
         method: "POST"
       });
 
+      shouldResetLoading = false;
       router.push(`/app/auth/my-offers/${createdOfferId}`);
     } catch (error) {
       if (error?.status === 422) {
-        setFieldErrors(error?.data?.errors || {});
+        const errors = error?.data?.errors || {};
+        setFieldErrors(errors);
         setMessage(
-          error?.data?.message ||
-            "Please review the form and try again."
+          Object.keys(errors).length > 0
+            ? t("offers.required_fields_missing")
+            : error?.data?.message || t("general.invalid_submission")
         );
       } else {
         setMessage(
-          error?.message || "Unable to create the offer right now."
+          error?.message || t("offers.create_error")
         );
       }
     } finally {
-      setIsSaving(false);
-      setIsPublishing(false);
+      if (shouldResetLoading) {
+        setIsSaving(false);
+        setIsPublishing(false);
+      }
     }
   };
 
@@ -180,31 +244,39 @@ export default function CreateOfferPage() {
     <div className="space-y-6 pb-8">
       <div>
         <h1 className="text-2xl font-semibold text-primary-800">
-          Create offer
+          {t("offers.create_offer")}
         </h1>
         <p className="text-sm text-secondary-400">
-          Tell us more about the experience you want to host.
+          {t("offers.create_offer_description")}
         </p>
       </div>
 
       <div className="space-y-3">
         <p className="text-sm font-semibold text-primary-800">
-          Pick a category
+          {renderRequiredLabel(t("offers.select_category"))}
         </p>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="flex flex-wrap gap-2">
           {categories.map((category) => {
             const isActive = Number(formValues.category_id) === category.id;
+            const iconName = category?.icon || category?.parent?.icon;
             return (
               <button
                 key={category.id}
                 type="button"
                 onClick={() => handleCategorySelect(category.id)}
-                className={`rounded-2xl border px-4 py-3 text-left text-sm font-semibold transition ${
+                className={`flex items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-normal transition ${
                   isActive
-                    ? "border-secondary-600 bg-secondary-600 text-white"
-                    : "border-[#EADAF1] text-secondary-600"
+                    ? "border-secondary-500 bg-secondary-500 text-white"
+                    : "border-[#A564C2] bg-white text-secondary-400"
                 }`}
               >
+                {iconName ? (
+                  <Ionicon
+                    name={iconName}
+                    size={16}
+                    className={isActive ? "text-white" : "text-primary-800"}
+                  />
+                ) : null}
                 {category.name}
               </button>
             );
@@ -220,7 +292,7 @@ export default function CreateOfferPage() {
       {subCategories.length > 0 ? (
         <div className="space-y-1">
           <label className="mb-1 block text-lg text-primary-500">
-            Sub category
+            {t("offers.sub_category")}
           </label>
           <select
             value={formValues.sub_category_id}
@@ -229,7 +301,7 @@ export default function CreateOfferPage() {
             }
             className="w-full rounded-full border-2 border-[#EADAF1] px-4 py-3 text-secondary-400 outline-none focus:border-primary-500"
           >
-            <option value="">Select a sub category</option>
+            <option value="">{t("offers.sub_category_placeholder")}</option>
             {subCategories.map((category) => (
               <option key={category.id} value={category.id}>
                 {category.name}
@@ -241,55 +313,66 @@ export default function CreateOfferPage() {
 
       <Input
         name="title"
-        label="Title"
+        label={renderRequiredLabel(t("offers.title"))}
         value={formValues.title}
         onChange={(event) => updateField("title", event.target.value)}
         error={normalizeFieldError(fieldErrors, "title")}
+        placeholder={t("offers.title_placeholder")}
         required
       />
 
       <div className="grid gap-4 md:grid-cols-2">
         <Input
           name="start_date"
-          label="Start date"
+          label={renderRequiredLabel(t("offers.start_date"))}
           type="date"
           value={formValues.start_date}
           onChange={(event) => updateField("start_date", event.target.value)}
           error={normalizeFieldError(fieldErrors, "start_date")}
+          inputClassName="brand-picker"
+          placeholder={t("offers.start_date_placeholder")}
           required
         />
         <Input
           name="start_time"
-          label="Start time"
+          label={renderRequiredLabel(t("offers.start_time"))}
           type="time"
           value={formValues.start_time}
           onChange={(event) => updateField("start_time", event.target.value)}
           error={normalizeFieldError(fieldErrors, "start_time")}
+          inputClassName="brand-picker"
+          placeholder={t("offers.start_time_placeholder")}
           required
         />
         <Input
           name="end_date"
-          label="End date"
+          label={renderRequiredLabel(t("offers.end_date"))}
           type="date"
           value={formValues.end_date}
           onChange={(event) => updateField("end_date", event.target.value)}
           error={normalizeFieldError(fieldErrors, "end_date")}
+          inputClassName="brand-picker"
+          placeholder={t("offers.end_date_placeholder")}
           required
         />
         <Input
           name="end_time"
-          label="End time"
+          label={renderRequiredLabel(t("offers.end_time"))}
           type="time"
           value={formValues.end_time}
           onChange={(event) => updateField("end_time", event.target.value)}
           error={normalizeFieldError(fieldErrors, "end_time")}
+          inputClassName="brand-picker"
+          placeholder={t("offers.end_time_placeholder")}
           required
         />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-1">
-          <label className="mb-1 block text-lg text-primary-500">City</label>
+          <label className="mb-1 block text-lg text-primary-500">
+            {renderRequiredLabel(t("offers.city"))}
+          </label>
           <select
             value={formValues.city_id}
             onChange={(event) => updateField("city_id", event.target.value)}
@@ -298,8 +381,9 @@ export default function CreateOfferPage() {
                 ? "border-danger-600"
                 : "border-[#EADAF1]"
             }`}
+            required
           >
-            <option value="">Select a city</option>
+            <option value="">{t("offers.city_placeholder")}</option>
             {cities.map((city) => (
               <option key={city.id} value={city.id}>
                 {city.name}
@@ -314,37 +398,40 @@ export default function CreateOfferPage() {
         </div>
         <Input
           name="price"
-          label="Price"
+          label={t("offers.price")}
           type="number"
           value={formValues.price}
           onChange={(event) => updateField("price", event.target.value)}
           error={normalizeFieldError(fieldErrors, "price")}
+          placeholder={t("offers.price_placeholder")}
         />
       </div>
 
       <Input
         name="address"
-        label="Address"
+        label={renderRequiredLabel(t("offers.address"))}
         value={formValues.address}
         onChange={(event) => updateField("address", event.target.value)}
         error={normalizeFieldError(fieldErrors, "address")}
+        placeholder={t("offers.address_placeholder")}
         required
       />
 
       <Input
         name="max_participants"
-        label="Max participants"
+        label={t("offers.max_participants")}
         type="number"
         value={formValues.max_participants}
         onChange={(event) =>
           updateField("max_participants", event.target.value)
         }
         error={normalizeFieldError(fieldErrors, "max_participants")}
+        placeholder={t("offers.max_participants_placeholder")}
       />
 
       <div className="space-y-1">
         <label className="mb-1 block text-lg text-primary-500">
-          Description
+          {renderRequiredLabel(t("offers.description"))}
         </label>
         <textarea
           rows={4}
@@ -355,7 +442,8 @@ export default function CreateOfferPage() {
               ? "border-danger-600"
               : "border-[#EADAF1]"
           }`}
-          placeholder="Describe your offer."
+          placeholder={t("offers.description_placeholder")}
+          required
         />
         {normalizeFieldError(fieldErrors, "description") ? (
           <p className="text-sm text-danger-600">
@@ -367,7 +455,7 @@ export default function CreateOfferPage() {
       {dynamicQuestions.length > 0 ? (
         <div className="space-y-4">
           <p className="text-sm font-semibold text-primary-800">
-            Extra questions
+            {t("offers.extra_questions")}
           </p>
           {dynamicQuestions.map((question) => {
             const questionValue =
@@ -406,7 +494,7 @@ export default function CreateOfferPage() {
                       error ? "border-danger-600" : "border-[#EADAF1]"
                     }`}
                   >
-                    <option value="">Select</option>
+                    <option value="">{t("select_option")}</option>
                     {(question.formatted_settings?.options || []).map(
                       (option) => (
                         <option key={option.value} value={option.value}>
@@ -433,6 +521,7 @@ export default function CreateOfferPage() {
                     updateDynamicQuestion(question.name, event.target.value)
                   }
                   error={error}
+                  inputClassName="brand-picker"
                 />
               );
             }
@@ -448,14 +537,18 @@ export default function CreateOfferPage() {
         <Button
           type="button"
           variant="outline"
-          label={isSaving ? "Saving..." : "Save draft"}
+          label={
+            isSaving ? `${t("offers.save_draft")}...` : t("offers.save_draft")
+          }
           className="w-full"
           onClick={() => handleSubmit(true)}
           disabled={isSaving || isPublishing}
         />
         <Button
           type="button"
-          label={isPublishing ? "Publishing..." : "Submit for approval"}
+          label={
+            isPublishing ? `${t("offers.create")}...` : t("offers.create")
+          }
           className="w-full"
           onClick={() => handleSubmit(false)}
           disabled={isSaving || isPublishing}
