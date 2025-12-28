@@ -9,7 +9,6 @@ import UserAvatar from "../../../../../components/user/user-avatar";
 import UsersAvatarsList from "../../../../../components/user/users-avatars-list";
 import Button from "../../../../../components/ui/button";
 import Modal from "../../../../../components/ui/modal";
-import ConfirmModal from "../../../../../components/ui/confirm-modal";
 import QrCodeCanvas, {
   drawQrToCanvas
 } from "../../../../../components/ui/qr-code";
@@ -1469,17 +1468,34 @@ export default function OfferDetailsPage() {
         </div>
       </Modal>
 
-      <ConfirmModal
+      <Modal
         open={isRemoveModalOpen}
         title={t("Remove participation")}
-        description={t("Are you sure you want to remove your participation?")}
-        confirmLabel={t("Yes, remove")}
-        confirmVariant="destructive"
-        loading={actionState === "remove"}
-        error={isRemoveModalOpen ? actionError : ""}
-        onConfirm={handleRemoveParticipation}
         onClose={() => setRemoveModalOpen(false)}
-      />
+      >
+        <p className="text-sm text-secondary-500">
+          {t("Are you sure you want to remove your participation?")}
+        </p>
+        {isRemoveModalOpen && actionError ? (
+          <p className="mt-3 text-xs text-danger-600">{actionError}</p>
+        ) : null}
+        <div className="mt-5 flex flex-col gap-3">
+          <Button
+            variant="destructive"
+            label={t("Yes, remove")}
+            className="w-full"
+            onClick={handleRemoveParticipation}
+            loading={actionState === "remove"}
+          />
+          <Button
+            variant="outline"
+            label={t("Cancel")}
+            className="w-full"
+            onClick={() => setRemoveModalOpen(false)}
+            disabled={actionState === "remove"}
+          />
+        </div>
+      </Modal>
     </div>
   );
 }

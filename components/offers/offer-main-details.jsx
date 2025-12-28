@@ -5,7 +5,6 @@ import React from "react";
 import { useI18n } from "../i18n-provider";
 import {
   CalendarDaysIcon,
-  ClockIcon,
   MapPinIcon,
   TagIcon
 } from "../ui/heroicons";
@@ -73,7 +72,7 @@ export default function OfferMainDetails({ offer }) {
         </div>
       </div>
       <div className="flex w-full min-w-0 items-start gap-2 rounded-2xl bg-[#F7F1FA] px-3 py-2 text-primary-900">
-        <ClockIcon {...iconProps} />
+        <CalendarDaysIcon {...iconProps} />
         <div className="min-w-0 flex flex-col leading-tight">
           <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-secondary-400">
             {t("End date")}

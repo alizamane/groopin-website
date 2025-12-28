@@ -299,7 +299,7 @@ export default function CreateOfferPage() {
             onChange={(event) =>
               updateField("sub_category_id", event.target.value)
             }
-            className="w-full rounded-full border-2 border-[#EADAF1] px-4 py-3 text-secondary-400 outline-none focus:border-primary-500"
+            className="w-full min-h-[52px] rounded-full border-2 border-[#EADAF1] px-4 py-3 text-base leading-6 text-secondary-400 outline-none focus:border-primary-500"
           >
             <option value="">{t("offers.sub_category_placeholder")}</option>
             {subCategories.map((category) => (
@@ -376,7 +376,7 @@ export default function CreateOfferPage() {
           <select
             value={formValues.city_id}
             onChange={(event) => updateField("city_id", event.target.value)}
-            className={`w-full rounded-full border-2 px-4 py-3 text-secondary-400 outline-none focus:border-primary-500 ${
+            className={`w-full min-h-[52px] rounded-full border-2 px-4 py-3 text-base leading-6 text-secondary-400 outline-none focus:border-primary-500 ${
               normalizeFieldError(fieldErrors, "city_id")
                 ? "border-danger-600"
                 : "border-[#EADAF1]"
@@ -490,7 +490,7 @@ export default function CreateOfferPage() {
                     onChange={(event) =>
                       updateDynamicQuestion(question.name, event.target.value)
                     }
-                    className={`w-full rounded-full border-2 px-4 py-3 text-secondary-400 outline-none focus:border-primary-500 ${
+                    className={`w-full min-h-[52px] rounded-full border-2 px-4 py-3 text-base leading-6 text-secondary-400 outline-none focus:border-primary-500 ${
                       error ? "border-danger-600" : "border-[#EADAF1]"
                     }`}
                   >
@@ -557,3 +557,5 @@ export default function CreateOfferPage() {
     </div>
   );
 }
+
+

@@ -270,7 +270,7 @@ export default function OfferCard({ offer, currentUserId }) {
             ) : null}
             {isOffersContext && !isActiveStatus ? (
               <span
-                className={`whitespace-nowrap rounded-full px-3 py-1 text-[10px] font-semibold ${statusTone}`}
+                className={`whitespace-nowrap rounded-full px-3 py-1 text-[11px] font-semibold ${statusTone}`}
               >
                 {statusLabel}
               </span>
