@@ -67,6 +67,10 @@ export default function MyOfferParticipantsPage() {
         await Promise.all([loadOffer(), loadRequests()]);
         if (isMounted) setStatus("ready");
       } catch (err) {
+        if ([404, 422].includes(err?.status)) {
+          router.replace("/app/auth/participating");
+          return;
+        }
         if (isMounted) {
           setError(err?.message || t("general.error_has_occurred"));
           setStatus("error");
