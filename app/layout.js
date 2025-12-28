@@ -1,5 +1,6 @@
 import "./globals.css";
 import { Lato } from "next/font/google";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { I18nProvider } from "../components/i18n-provider";
 
 const lato = Lato({
@@ -41,6 +42,7 @@ export default function RootLayout({ children }) {
     <html lang="en" className={lato.variable}>
       <body className="bg-white text-charcoal-900 font-sans antialiased">
         <I18nProvider>{children}</I18nProvider>
+        <SpeedInsights />
       </body>
     </html>
   );
