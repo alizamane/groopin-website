@@ -1033,30 +1033,6 @@ export default function OfferDetailsPage() {
                 <p className="mt-2 text-xs text-secondary-500">
                   {t("ticket_scan_hint")}
                 </p>
-                <div className="mt-3 flex flex-col gap-2">
-                  <input
-                    value={scanToken}
-                    onChange={(event) =>
-                      setScanToken(normalizeTicketToken(event.target.value))
-                    }
-                    onPaste={(event) => {
-                      event.preventDefault();
-                      const pasted = event.clipboardData.getData("text");
-                      const normalized = normalizeTicketToken(pasted);
-                      setScanToken(normalized);
-                    }}
-                    placeholder={t("ticket_scan_placeholder")}
-                    className="w-full rounded-2xl border border-[#EADAF1] px-3 py-2 text-xs text-secondary-600 outline-none focus:border-primary-500"
-                  />
-                  <Button
-                    label={t("ticket_scan_button")}
-                    size="sm"
-                    className="w-full"
-                    onClick={() => handleScanTicket()}
-                    loading={scanBusy}
-                    disabled={!scanToken.trim() || scanBusy}
-                  />
-                </div>
                 {scanError ? (
                   <p className="mt-2 text-xs text-danger-600">{scanError}</p>
                 ) : null}
