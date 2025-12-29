@@ -237,8 +237,8 @@ export default function NotificationsPage() {
       }
       try {
         const endpoint = cursor
-          ? `notifications?cursor=${encodeURIComponent(cursor)}`
-          : "notifications";
+          ? `notifications?cursor=${encodeURIComponent(cursor)}&lite=1`
+          : "notifications?lite=1";
         const payload = await apiRequest(endpoint, { cache: false });
         const nextItems = payload?.data || [];
         const nextMetaCursor = payload?.meta?.next_cursor || null;

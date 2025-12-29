@@ -14,7 +14,7 @@ export default function FavoritesPage() {
   const user = getUser();
 
   useEffect(() => {
-    apiRequest("offers/favorites")
+    apiRequest("offers/favorites?lite=1")
       .then((payload) => {
         setOffers(payload?.data || []);
         setStatus("ready");

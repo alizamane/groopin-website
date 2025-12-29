@@ -33,7 +33,7 @@ export default function GroopsPage() {
 
   useEffect(() => {
     setStatus("loading");
-    apiRequest("conversations", { cache: false })
+    apiRequest("conversations?lite=1", { cache: false })
       .then((payload) => {
         const data = payload?.data || [];
         const sorted = [...data].sort((a, b) => {

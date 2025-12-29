@@ -14,7 +14,7 @@ export default function ParticipatingPage() {
   const user = getUser();
 
   useEffect(() => {
-    apiRequest("participating")
+    apiRequest("participating?lite=1")
       .then((payload) => {
         setOffers(payload?.data || []);
         setStatus("ready");

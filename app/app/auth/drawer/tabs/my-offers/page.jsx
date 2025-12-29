@@ -28,7 +28,7 @@ export default function MyOffersPage() {
 
   useEffect(() => {
     setStatus("loading");
-    apiRequest(`my-offers?filter[status]=${selectedStatus}`)
+    apiRequest(`my-offers?filter[status]=${selectedStatus}&lite=1`)
       .then((payload) => {
         setOffers(payload?.data || []);
         setStatus("ready");

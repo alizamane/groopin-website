@@ -26,11 +26,11 @@ export default function RequestsPage() {
 
     const fetcher =
       selected === "pending"
-        ? apiRequest("requests")
+        ? apiRequest("requests?lite=1")
         : apiRequest(
             `my-offers/participated?filter[status]=${
               selected === "closed" ? "closed" : "active"
-            }`
+            }&lite=1`
           );
 
     fetcher

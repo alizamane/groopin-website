@@ -97,8 +97,8 @@ export default function ProfilePage() {
 
   useEffect(() => {
     Promise.all([
-      apiRequest("my-offers?filter[status]=closed"),
-      apiRequest("participating?filter[status]=closed&filter[isowner]=0")
+      apiRequest("my-offers?filter[status]=closed&lite=1"),
+      apiRequest("participating?filter[status]=closed&filter[isowner]=0&lite=1")
     ])
       .then(([created, participated]) => {
         setCreatedOffers(created?.data || []);

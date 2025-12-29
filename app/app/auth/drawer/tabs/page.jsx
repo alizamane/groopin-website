@@ -208,7 +208,8 @@ export default function TabsHomePage() {
   useEffect(() => {
     setStatus("loading");
     const query = buildFilterParams(filters);
-    const endpoint = query ? `offers?${query}` : "offers";
+    const liteParam = query ? "&lite=1" : "?lite=1";
+    const endpoint = query ? `offers?${query}${liteParam}` : "offers?lite=1";
     const requestId = (latestOfferRequestRef.current += 1);
     apiRequest(endpoint, { cacheTime: 15000 })
       .then((payload) => {

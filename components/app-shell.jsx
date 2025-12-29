@@ -44,7 +44,7 @@ export default function AppShell({ children }) {
 
   const refreshNotificationsCount = useCallback(async () => {
     try {
-      const payload = await apiRequest("notifications");
+      const payload = await apiRequest("notifications?lite=1");
       const data = Array.isArray(payload?.data) ? payload.data : [];
       const computed = data.filter((item) => !item?.read_at).length;
       const metaCount =
@@ -61,7 +61,7 @@ export default function AppShell({ children }) {
   const refreshGroopsCount = useCallback(
     async (activeConversationId = null) => {
       try {
-        const payload = await apiRequest("conversations");
+        const payload = await apiRequest("conversations?lite=1");
         const data = payload?.data || [];
         const metaCount = payload?.meta?.has_unread_messages_count;
         const computed = data.reduce((sum, conversation) => {
