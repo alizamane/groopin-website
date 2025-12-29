@@ -1,6 +1,7 @@
 import "./globals.css";
 import { Lato } from "next/font/google";
 import { I18nProvider } from "../components/i18n-provider";
+import { Analytics } from "@vercel/analytics/next";
 
 const lato = Lato({
   subsets: ["latin"],
@@ -41,6 +42,7 @@ export default function RootLayout({ children }) {
     <html lang="en" className={lato.variable}>
       <body className="bg-white text-charcoal-900 font-sans antialiased">
         <I18nProvider>{children}</I18nProvider>
+        <Analytics />
       </body>
     </html>
   );
