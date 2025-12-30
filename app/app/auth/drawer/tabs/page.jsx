@@ -613,113 +613,119 @@ export default function TabsHomePage() {
             </div>
           </div>
 
-          <div className="space-y-3 border-b border-[#EADAF1] pb-4">
+          <div className="space-y-4 border-b border-[#EADAF1] pb-4">
             <p className="text-sm font-semibold text-primary-900">
-              {t("participants_sex")}
+              {t("offer_preferences")}
             </p>
-            <div className="flex flex-wrap gap-2">
-              {renderChip(
-                "sex-all",
-                t("All"),
-                !localFilters.sex,
-                () => setLocalFilters((prev) => ({ ...prev, sex: null })),
-                null,
-                filterChipClassName
-              )}
-              {renderChip(
-                "sex-male",
-                t("male"),
-                localFilters.sex === "male",
-                () => setLocalFilters((prev) => ({ ...prev, sex: "male" })),
-                null,
-                filterChipClassName
-              )}
-              {renderChip(
-                "sex-female",
-                t("female"),
-                localFilters.sex === "female",
-                () => setLocalFilters((prev) => ({ ...prev, sex: "female" })),
-                null,
-                filterChipClassName
-              )}
-            </div>
-          </div>
 
-          <div className="space-y-3 border-b border-[#EADAF1] pb-4">
-            <p className="text-sm font-semibold text-primary-900">
-              {t("participants_activity_sector")}
-            </p>
-            <select
-              value=""
-              onChange={(event) => {
-                const value = event.target.value;
-                if (!value) return;
-                addMultiFilter("interests", value);
-              }}
-              className="min-h-[40px] w-full rounded-2xl border border-[#EADAF1] px-3 py-2 text-sm text-secondary-600"
-            >
-              <option value="">{t("Select")}</option>
-              {interests.map((interest) => (
-                <option
-                  key={interest.value}
-                  value={String(interest.value)}
-                >
-                  {interest.label}
-                </option>
-              ))}
-            </select>
-            {localFilters.interests?.length ? (
-              <div className="flex flex-wrap gap-2 pt-2">
-                {localFilters.interests.map((value) => (
-                  <button
-                    key={`selected-interest-${value}`}
-                    type="button"
-                    onClick={() => removeMultiFilter("interests", value)}
-                    className={`flex items-center gap-2 border border-secondary-500 bg-secondary-500 text-sm font-semibold text-white ${filterChipClassName}`}
-                  >
-                    <span>{interestLabelByValue.get(value) || value}</span>
-                    <span className="text-xs">x</span>
-                  </button>
-                ))}
+            <div className="space-y-3">
+              <p className="text-sm font-semibold text-primary-900">
+                {t("participants_sex")}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {renderChip(
+                  "sex-all",
+                  t("All"),
+                  !localFilters.sex,
+                  () => setLocalFilters((prev) => ({ ...prev, sex: null })),
+                  null,
+                  filterChipClassName
+                )}
+                {renderChip(
+                  "sex-male",
+                  t("male"),
+                  localFilters.sex === "male",
+                  () => setLocalFilters((prev) => ({ ...prev, sex: "male" })),
+                  null,
+                  filterChipClassName
+                )}
+                {renderChip(
+                  "sex-female",
+                  t("female"),
+                  localFilters.sex === "female",
+                  () => setLocalFilters((prev) => ({ ...prev, sex: "female" })),
+                  null,
+                  filterChipClassName
+                )}
               </div>
-            ) : null}
-          </div>
+            </div>
 
-          <div className="space-y-3">
-            <p className="text-sm font-semibold text-primary-900">
-              {t("participants_situation")}
-            </p>
-            <select
-              value={localFilters.marital_status || ""}
-              onChange={(event) =>
-                setLocalFilters((prev) => ({
-                  ...prev,
-                  marital_status: event.target.value || null
-                }))
-              }
-              className="min-h-[40px] w-full rounded-2xl border border-[#EADAF1] px-3 py-2 text-sm text-secondary-600"
-            >
-              <option value="">{t("All")}</option>
-              {maritalStatus.map((status) => (
-                <option key={status.value} value={String(status.value)}>
-                  {status.label}
-                </option>
-              ))}
-            </select>
+            <div className="space-y-3">
+              <p className="text-sm font-semibold text-primary-900">
+                {t("participants_activity_sector")}
+              </p>
+              <select
+                value=""
+                onChange={(event) => {
+                  const value = event.target.value;
+                  if (!value) return;
+                  addMultiFilter("interests", value);
+                }}
+                className="min-h-[40px] w-full rounded-2xl border border-[#EADAF1] px-3 py-2 text-sm text-secondary-600"
+              >
+                <option value="">{t("Select")}</option>
+                {interests.map((interest) => (
+                  <option
+                    key={interest.value}
+                    value={String(interest.value)}
+                  >
+                    {interest.label}
+                  </option>
+                ))}
+              </select>
+              {localFilters.interests?.length ? (
+                <div className="flex flex-wrap gap-2 pt-2">
+                  {localFilters.interests.map((value) => (
+                    <button
+                      key={`selected-interest-${value}`}
+                      type="button"
+                      onClick={() => removeMultiFilter("interests", value)}
+                      className={`flex items-center gap-2 border border-secondary-500 bg-secondary-500 text-sm font-semibold text-white ${filterChipClassName}`}
+                    >
+                      <span>{interestLabelByValue.get(value) || value}</span>
+                      <span className="text-xs">x</span>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-sm font-semibold text-primary-900">
+                {t("participants_situation")}
+              </p>
+              <select
+                value={localFilters.marital_status || ""}
+                onChange={(event) =>
+                  setLocalFilters((prev) => ({
+                    ...prev,
+                    marital_status: event.target.value || null
+                  }))
+                }
+                className="min-h-[40px] w-full rounded-2xl border border-[#EADAF1] px-3 py-2 text-sm text-secondary-600"
+              >
+                <option value="">{t("All")}</option>
+                {maritalStatus.map((status) => (
+                  <option key={status.value} value={String(status.value)}>
+                    {status.label}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 
         <div className="mt-6 flex flex-col gap-3 sm:flex-row">
           <Button
+            label={t("Validate")}
+            className="w-full"
+            onClick={handleApplyFilters}
+          />
+          <Button
             variant="outline"
             label={t("Close")}
             className="w-full"
             onClick={() => setFilterOpen(false)}
-          />
-          <Button
-            label={t("Validate")}
-            className="w-full"
-            onClick={handleApplyFilters}
           />
         </div>
       </Modal>

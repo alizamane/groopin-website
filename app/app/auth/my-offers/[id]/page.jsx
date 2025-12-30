@@ -1015,56 +1015,6 @@ export default function MyOfferDetailsPage() {
                   </button>
                 </div>
               </div>
-
-              <div className="rounded-3xl border border-[#EADAF1] bg-white p-5">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-primary-900">
-                    {t("Participants")}
-                  </h3>
-                  <span className="text-xs text-secondary-400">
-                    {otherParticipants.length}
-                  </span>
-                </div>
-                <div className="mt-4 space-y-3">
-                  {otherParticipants.length === 0 ? (
-                    <p className="text-sm text-secondary-400">
-                      {t("No participants yet")}
-                    </p>
-                  ) : (
-                    otherParticipants.map((user) => (
-                      <Link
-                        key={user.id}
-                        href={`/app/auth/users/${user.id}`}
-                        className="flex items-center justify-between gap-3 rounded-2xl border border-[#EADAF1] bg-white p-3"
-                      >
-                        <div className="flex items-center gap-3">
-                          <UserAvatar user={user} size={44} withBorder />
-                          <div>
-                            <div className="flex flex-wrap items-center gap-2">
-                              <p className="text-sm font-semibold text-primary-900">
-                                {user.first_name} {user.last_name}
-                              </p>
-                              {checkedInUserIds.has(user.id) ? (
-                                <span className="rounded-full bg-success-100 px-2 py-1 text-[10px] font-semibold text-success-700">
-                                  {t("ticket_present_badge")}
-                                </span>
-                              ) : null}
-                            </div>
-                            <p className="text-xs text-secondary-400">
-                              {getAge(user)
-                                ? t("years_old", { count: getAge(user) })
-                                : ""}
-                            </p>
-                          </div>
-                        </div>
-                        <span className="text-xs font-semibold text-secondary-500">
-                          {t("Profile")}
-                        </span>
-                      </Link>
-                    ))
-                  )}
-                </div>
-              </div>
             </>
           ) : null}
 
