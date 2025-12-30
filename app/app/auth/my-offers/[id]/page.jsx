@@ -59,6 +59,7 @@ export default function MyOfferDetailsPage() {
     type: "",
     id: null
   });
+  const [isPresentsOpen, setPresentsOpen] = useState(false);
   const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
   const [isShareOpen, setShareOpen] = useState(false);
   const [shareFeedback, setShareFeedback] = useState("");
@@ -579,6 +580,11 @@ export default function MyOfferDetailsPage() {
     }
   };
 
+  const handleOpenPresents = () => {
+    setPresentsOpen(true);
+    loadCheckins();
+  };
+
   const handleRejectRequest = async (requestId) => {
     if (requestActionState.type) return;
     setRequestActionState({ type: "reject", id: requestId });
@@ -970,31 +976,43 @@ export default function MyOfferDetailsPage() {
                     lastItemText={participantsText}
                   />
                 </div>
-                  <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                  <div className="rounded-2xl bg-secondary-500/10 p-3">
+                <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                  <button
+                    type="button"
+                    onClick={() => setParticipantsOpen(true)}
+                    className="rounded-2xl bg-secondary-500/10 p-3 text-left transition hover:-translate-y-0.5 hover:bg-secondary-500/15 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500/40"
+                  >
                     <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-secondary-500">
                       {t("Participants")}
                     </p>
                     <p className="mt-2 text-lg font-semibold text-secondary-700">
                       {participantsCount}
                     </p>
-                  </div>
-                  <div className="rounded-2xl bg-[#D59500]/10 p-3">
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRequestsOpen(true)}
+                    className="rounded-2xl bg-[#D59500]/10 p-3 text-left transition hover:-translate-y-0.5 hover:bg-[#D59500]/15 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D59500]/40"
+                  >
                     <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#B88400]">
                       {t("Pending")}
                     </p>
                     <p className="mt-2 text-lg font-semibold text-[#B88400]">
                       {pendingCount}
                     </p>
-                  </div>
-                  <div className="rounded-2xl bg-success-500/10 p-3">
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleOpenPresents}
+                    className="rounded-2xl bg-success-500/10 p-3 text-left transition hover:-translate-y-0.5 hover:bg-success-500/15 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-success-500/40"
+                  >
                     <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-success-700">
                       {t("ticket_checked_in_count")}
                     </p>
                     <p className="mt-2 text-lg font-semibold text-success-700">
                       {presentCount}
                     </p>
-                  </div>
+                  </button>
                 </div>
                 <div className="mt-4 flex flex-wrap gap-3">
                   <button
@@ -1502,6 +1520,65 @@ export default function MyOfferDetailsPage() {
             label={t("Close")}
             className="w-full"
             onClick={() => setRequestsOpen(false)}
+          />
+        </div>
+      </Modal>
+
+      <Modal
+        open={isPresentsOpen}
+        title={t("ticket_checkins_title")}
+        onClose={() => setPresentsOpen(false)}
+      >
+        <div className="max-h-[70vh] space-y-4 overflow-y-auto pr-2">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-primary-900">
+              {t("ticket_checkins_title")}
+            </h3>
+            <span className="text-xs text-secondary-400">
+              {presentCount}
+            </span>
+          </div>
+          {checkedInError ? (
+            <p className="text-sm text-danger-600">
+              {checkedInError}
+            </p>
+          ) : checkedInEntries.length === 0 ? (
+            <p className="text-sm text-secondary-400">
+              {t("ticket_checkins_empty")}
+            </p>
+          ) : (
+            checkedInEntries.map((entry) => (
+              <div
+                key={entry.id}
+                className="flex items-center justify-between gap-3 rounded-2xl border border-[#EADAF1] bg-white p-3"
+              >
+                <div className="flex items-center gap-3">
+                  <UserAvatar user={entry.user} size={40} withBorder />
+                  <div>
+                    <p className="text-sm font-semibold text-primary-900">
+                      {entry.user?.name || ""}
+                    </p>
+                    <p className="text-xs text-secondary-500">
+                      {entry.checked_in_at
+                        ? formatScanDateTime(entry.checked_in_at)
+                        : ""}
+                    </p>
+                  </div>
+                </div>
+                <span className="text-xs font-semibold text-primary-700">
+                  {t("ticket_present_badge")}
+                </span>
+              </div>
+            ))
+          )}
+        </div>
+
+        <div className="mt-4 flex flex-col gap-3">
+          <Button
+            variant="outline"
+            label={t("Close")}
+            className="w-full"
+            onClick={() => setPresentsOpen(false)}
           />
         </div>
       </Modal>
