@@ -659,27 +659,35 @@ export default function EditMyOfferPage() {
                   <label className="mb-1 block text-lg text-primary-500">
                     {question.label}
                   </label>
-                  <select
-                    multiple
-                    value={questionValue}
-                    onChange={(event) => {
-                      const selectedValues = Array.from(
-                        event.target.selectedOptions
-                      ).map((option) => option.value);
-                      updateDynamicQuestion(question.name, selectedValues);
-                    }}
-                    className={`w-full min-h-[52px] rounded-2xl border-2 px-4 py-3 text-base leading-6 text-secondary-400 outline-none focus:border-primary-500 ${
-                      error ? "border-danger-600" : "border-[#EADAF1]"
-                    }`}
-                  >
+                  <div className="flex flex-wrap gap-2">
                     {(question.formatted_settings?.options || []).map(
-                      (option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      )
+                      (option) => {
+                        const optionValue = String(option.value);
+                        const isActive = questionValue.includes(optionValue);
+                        return (
+                          <button
+                            key={optionValue}
+                            type="button"
+                            onClick={() => {
+                              const nextValues = isActive
+                                ? questionValue.filter(
+                                    (item) => item !== optionValue
+                                  )
+                                : [...questionValue, optionValue];
+                              updateDynamicQuestion(question.name, nextValues);
+                            }}
+                            className={`flex items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-normal transition ${
+                              isActive
+                                ? "border-secondary-500 bg-secondary-500 text-white"
+                                : "border-[#A564C2] bg-white text-secondary-400"
+                            }`}
+                          >
+                            {option.label}
+                          </button>
+                        );
+                      }
                     )}
-                  </select>
+                  </div>
                   {error ? (
                     <p className="text-sm text-danger-600">{error}</p>
                   ) : null}
