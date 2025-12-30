@@ -486,6 +486,7 @@
   "request_accepted": "Demande acceptée",
   "request_status_title": "Statut de votre demande",
   "started_since_time": "Commencée il y a {{time}}",
+  "in_progress": "En cours",
   "see the offer": "Voir l'offre",
   "select_option": "Sélectionnez une option",
   "set organizator age": "Définir l'âge de l'organisateur",

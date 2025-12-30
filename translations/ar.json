@@ -477,6 +477,7 @@
   "request_accepted": "?? ???? ?????",
   "request_status_title": "???? ?????",
   "started_since_time": "بدأت منذ {{time}}",
+  "in_progress": "جاري التنفيذ",
   "see the offer": "انظر العرض",
   "select_option": "اختيارات",
   "set organizator age": "تعيين عصر المنظم",

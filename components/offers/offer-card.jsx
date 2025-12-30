@@ -49,10 +49,12 @@ const formatTimeRemaining = (milliseconds, t) => {
   const remainingHours = hours % 24;
   const displayMinutes = minutes % 60;
 
+  // If more than 1 day away, only show days and hours (no minutes)
   if (days > 0) {
-    return `${days}${daysUnit} ${remainingHours}${hoursUnit} ${displayMinutes}${minutesUnit}`;
+    return `${days}${daysUnit} ${remainingHours}${hoursUnit}`;
   }
 
+  // Less than 1 day: show hours and minutes
   return `${hours}${hoursUnit} ${displayMinutes}${minutesUnit}`;
 };
 
@@ -174,8 +176,8 @@ export default function OfferCard({ offer, currentUserId }) {
       const formattedTime = formatTimeRemaining(diffMs, t);
       return t("starts_in_time", { time: formattedTime });
     }
-    const startedSince = formatTimeRemaining(Math.abs(diffMs), t);
-    return t("started_since_time", { time: startedSince });
+    // Offer has started - show "In progress"
+    return t("in_progress");
   }, [
     offer?.start_date,
     offer?.start_time,
