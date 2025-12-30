@@ -243,7 +243,7 @@ export default function AppShell({ children }) {
             className="text-primary-800"
             onClick={() => setDrawerOpen(true)}
           >
-            <Bars3Icon size={26} className="text-primary-800" />
+            <Bars3Icon size={30} color="#37074C" />
           </button>
           <div className="flex flex-1 justify-center">
             <AnimatedLogo width={90} height={40} />

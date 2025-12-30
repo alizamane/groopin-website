@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import OfferMainDetails from "../../../../../components/offers/offer-main-details";
+import { getLocalizedText } from "../../../../../components/offers/offer-text";
 import UserAvatar from "../../../../../components/user/user-avatar";
 import UsersAvatarsList from "../../../../../components/user/users-avatars-list";
 import Button from "../../../../../components/ui/button";
@@ -77,6 +78,7 @@ export default function MyOfferDetailsPage() {
   const scanVideoRef = useRef(null);
   const scanStreamRef = useRef(null);
   const scanFrameRef = useRef(null);
+  const [offerQuestions, setOfferQuestions] = useState([]);
   const scanBusyRef = useRef(false);
   const scanResultOpenRef = useRef(false);
   const lastScanRef = useRef({ token: "", time: 0 });
@@ -211,6 +213,19 @@ export default function MyOfferDetailsPage() {
   useEffect(() => {
     loadOffer();
   }, [params.id]);
+
+  useEffect(() => {
+    apiRequest("parameters", { cacheTime: 300000 })
+      .then((payload) => {
+        const dynamicGroups = payload?.dynamic_questions || {};
+        setOfferQuestions(
+          dynamicGroups.offer || dynamicGroups["App\\\\Models\\\\Offer"] || []
+        );
+      })
+      .catch(() => {
+        setOfferQuestions([]);
+      });
+  }, []);
 
   useEffect(() => {
     if (!isRequestsOpen) return;
@@ -405,8 +420,50 @@ export default function MyOfferDetailsPage() {
         ? t("closed")
         : t("Actives"));
   const pendingCount = offer?.pending_participants_count || 0;
-  const dynamicAnswers = offer?.resolved_dynamic_answers || {};
+  const dynamicAnswers =
+    offer?.resolved_dynamic_answers || offer?.dynamic_answers || {};
   const dynamicEntries = Object.entries(dynamicAnswers);
+  const dynamicOptionLabels = useMemo(() => {
+    const map = new Map();
+    offerQuestions.forEach((question) => {
+      const options = question?.formatted_settings?.options || [];
+      map.set(
+        question.name,
+        new Map(options.map((option) => [String(option.value), option.label]))
+      );
+    });
+    return map;
+  }, [offerQuestions]);
+  const preferenceChips = useMemo(() => {
+    if (!dynamicEntries.length) return [];
+    const chips = [];
+    dynamicEntries.forEach(([key, rawValue]) => {
+      let values = Array.isArray(rawValue) ? rawValue : [rawValue];
+      if (typeof rawValue === "string") {
+        const trimmed = rawValue.trim();
+        if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+          try {
+            const parsed = JSON.parse(trimmed);
+            if (Array.isArray(parsed)) {
+              values = parsed;
+            }
+          } catch {
+            // keep raw string
+          }
+        }
+      }
+      values.forEach((value, index) => {
+        if (value === null || value === undefined || value === "") return;
+        const labelMap = dynamicOptionLabels.get(key);
+        const label =
+          labelMap?.get(String(value)) ||
+          getLocalizedText(value, locale) ||
+          String(value);
+        chips.push({ key: `${key}-${index}-${String(value)}`, label });
+      });
+    });
+    return chips;
+  }, [dynamicEntries, dynamicOptionLabels, locale]);
   const isDraft = Boolean(offer?.is_draft) || offer?.status === "draft";
   const canPublish = isDraft && actionState === "idle";
   const participantsList = offer?.participants || [];
@@ -934,13 +991,13 @@ export default function MyOfferDetailsPage() {
                   {t("Group Preferences")}
                 </h2>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  {dynamicEntries.length ? (
-                    dynamicEntries.map(([key, value]) => (
+                  {preferenceChips.length ? (
+                    preferenceChips.map((chip) => (
                       <span
-                        key={key}
+                        key={chip.key}
                         className="rounded-full border border-secondary-500/40 bg-white px-3 py-2 text-xs font-semibold text-secondary-500"
                       >
-                        {value}
+                        {chip.label}
                       </span>
                     ))
                   ) : (
