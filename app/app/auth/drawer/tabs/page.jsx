@@ -426,7 +426,6 @@ export default function TabsHomePage() {
 
       <Modal
         open={isFilterOpen}
-        title={t("Filters")}
         onClose={() => setFilterOpen(false)}
       >
         <div className="max-h-[70vh] space-y-5 overflow-y-auto pr-2">
@@ -438,38 +437,6 @@ export default function TabsHomePage() {
             >
               {t("Reset")}
             </button>
-          </div>
-
-          <div className="space-y-3 border-b border-[#EADAF1] pb-4">
-            <p className="text-sm font-semibold text-primary-900">
-              {t("Sex")}
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {renderChip(
-                "sex-all",
-                t("All"),
-                !localFilters.sex,
-                () => setLocalFilters((prev) => ({ ...prev, sex: null })),
-                null,
-                filterChipClassName
-              )}
-              {renderChip(
-                "sex-male",
-                t("male"),
-                localFilters.sex === "male",
-                () => setLocalFilters((prev) => ({ ...prev, sex: "male" })),
-                null,
-                filterChipClassName
-              )}
-              {renderChip(
-                "sex-female",
-                t("female"),
-                localFilters.sex === "female",
-                () => setLocalFilters((prev) => ({ ...prev, sex: "female" })),
-                null,
-                filterChipClassName
-              )}
-            </div>
           </div>
 
           <div className="space-y-3 border-b border-[#EADAF1] pb-4">
@@ -498,7 +465,7 @@ export default function TabsHomePage() {
 
           <div className="space-y-3 border-b border-[#EADAF1] pb-4">
             <p className="text-sm font-semibold text-primary-900">
-              {t("Participants")}
+              {t("participants_count_label")}
             </p>
             <div className="grid grid-cols-2 gap-3">
               <input
@@ -533,7 +500,9 @@ export default function TabsHomePage() {
           </div>
 
           <div className="space-y-3 border-b border-[#EADAF1] pb-4">
-            <p className="text-sm font-semibold text-primary-900">{t("Age")}</p>
+            <p className="text-sm font-semibold text-primary-900">
+              {t("organizer_age")}
+            </p>
             <div className="grid grid-cols-2 gap-3">
               <input
                 type="number"
@@ -646,7 +615,39 @@ export default function TabsHomePage() {
 
           <div className="space-y-3 border-b border-[#EADAF1] pb-4">
             <p className="text-sm font-semibold text-primary-900">
-              {t("Interests")}
+              {t("participants_sex")}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {renderChip(
+                "sex-all",
+                t("All"),
+                !localFilters.sex,
+                () => setLocalFilters((prev) => ({ ...prev, sex: null })),
+                null,
+                filterChipClassName
+              )}
+              {renderChip(
+                "sex-male",
+                t("male"),
+                localFilters.sex === "male",
+                () => setLocalFilters((prev) => ({ ...prev, sex: "male" })),
+                null,
+                filterChipClassName
+              )}
+              {renderChip(
+                "sex-female",
+                t("female"),
+                localFilters.sex === "female",
+                () => setLocalFilters((prev) => ({ ...prev, sex: "female" })),
+                null,
+                filterChipClassName
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-3 border-b border-[#EADAF1] pb-4">
+            <p className="text-sm font-semibold text-primary-900">
+              {t("participants_activity_sector")}
             </p>
             <select
               value=""
@@ -686,7 +687,7 @@ export default function TabsHomePage() {
 
           <div className="space-y-3">
             <p className="text-sm font-semibold text-primary-900">
-              {t("marital_status")}
+              {t("participants_situation")}
             </p>
             <select
               value={localFilters.marital_status || ""}
