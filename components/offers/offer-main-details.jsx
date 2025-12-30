@@ -3,6 +3,7 @@
 import React from "react";
 
 import { useI18n } from "../i18n-provider";
+import { getLocalizedText } from "./offer-text";
 import {
   CalendarDaysIcon,
   MapPinIcon,
@@ -44,7 +45,9 @@ export default function OfferMainDetails({ offer }) {
   const { t, locale } = useI18n();
   const dateLocale =
     locale === "fr" ? "fr-FR" : locale === "ar" ? "ar-MA" : "en-GB";
-  const address = [offer?.city?.name, offer?.address].filter(Boolean).join(" - ");
+  const cityName = getLocalizedText(offer?.city?.name, locale);
+  const addressText = getLocalizedText(offer?.address, locale);
+  const address = [cityName, addressText].filter(Boolean).join(" - ");
   const dateLabel = formatDate(offer?.start_date, dateLocale);
   const timeLabel = formatTime(offer?.start_time);
   const endDateLabel = formatDate(offer?.end_date, dateLocale);

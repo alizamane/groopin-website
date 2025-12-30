@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import OfferMainDetails from "./offer-main-details";
+import { getLocalizedText } from "./offer-text";
 import UserAvatar from "../user/user-avatar";
 import UsersAvatarsList from "../user/users-avatars-list";
 import Modal from "../ui/modal";
@@ -60,7 +61,7 @@ const formatTimeRemaining = (milliseconds, t) => {
 
 export default function OfferCard({ offer, currentUserId }) {
   const pathname = usePathname();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [actionState, setActionState] = useState("idle");
   const [actionError, setActionError] = useState("");
   const [isRequestModalOpen, setRequestModalOpen] = useState(false);
@@ -121,7 +122,9 @@ export default function OfferCard({ offer, currentUserId }) {
     offer?.category?.parent?.background_image_url ||
     "";
 
-  const categoryLabel = offer?.category?.name || t("Groops");
+  const categoryLabel =
+    getLocalizedText(offer?.category?.name, locale) || t("Groops");
+  const titleLabel = getLocalizedText(offer?.title, locale) || t("offers.title");
   const isOwner = offer?.owner?.id === currentUserId;
   const isOffersContext =
     pathname === "/app/auth/drawer/tabs" ||
@@ -260,7 +263,7 @@ export default function OfferCard({ offer, currentUserId }) {
               {categoryLabel}
             </span>
             <h3 className="mt-1 truncate text-lg font-semibold text-primary-900">
-              {offer?.title || t("offers.title")}
+              {titleLabel}
             </h3>
           </div>
           <div className="absolute right-4 top-4 flex items-center gap-2">
