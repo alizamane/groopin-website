@@ -1014,28 +1014,6 @@ export default function MyOfferDetailsPage() {
                     </p>
                   </button>
                 </div>
-                <div className="mt-4 flex flex-wrap gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setParticipantsOpen(true)}
-                    className="inline-flex items-center rounded-full bg-secondary-500 px-4 py-2 text-xs font-semibold text-white"
-                  >
-                    {t("Participants information")}
-                  </button>
-                  {pendingCount ? (
-                    <button
-                      type="button"
-                      onClick={() => setRequestsOpen(true)}
-                      className="inline-flex items-center rounded-full bg-[#D59500] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#C88600]"
-                    >
-                      {t("Participation requests")}: {pendingCount}
-                    </button>
-                  ) : (
-                    <span className="inline-flex items-center rounded-full border border-secondary-500/40 bg-white px-4 py-2 text-xs font-semibold text-secondary-500">
-                      {t("No requests")}
-                    </span>
-                  )}
-                </div>
               </div>
 
               <div className="rounded-3xl border border-[#EADAF1] bg-white p-5">
