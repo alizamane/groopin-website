@@ -1585,6 +1585,12 @@ export default function MyOfferDetailsPage() {
             disabled={!shareUrl}
           />
         </div>
+        <Button
+          variant="outline"
+          label={t("Close")}
+          className="mt-3 w-full"
+          onClick={handleCloseShare}
+        />
         {shareFeedback ? (
           <p className="mt-3 text-xs text-secondary-500">
             {shareFeedback}
