@@ -20,9 +20,11 @@ export default function MyOffersPage() {
   const user = getUser();
 
   const STATUS_FILTERS = [
-    { label: t("Draft"), value: "draft" },
+    
     { label: t("Actives"), value: "active" },
     { label: t("Pending"), value: "pending" },
+    { label: t("Draft"), value: "draft" },
+    
     { label: t("closed"), value: "closed" }
   ];
 
