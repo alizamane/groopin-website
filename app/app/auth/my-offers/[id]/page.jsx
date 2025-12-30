@@ -102,6 +102,8 @@ export default function MyOfferDetailsPage() {
       !offer.is_draft &&
       !offer.is_closed
   );
+  const isTicketingEnabled = offer?.ticketing_enabled !== false;
+  const canUseTickets = isActiveOffer && isTicketingEnabled;
   const ownerTabs = useMemo(
     () => {
       if (!isPublishedOffer) {
@@ -111,12 +113,12 @@ export default function MyOfferDetailsPage() {
         { id: "overview", label: t("Overview") },
         { id: "participants", label: t("Participants") }
       ];
-      if (isActiveOffer) {
+      if (canUseTickets) {
         tabs.push({ id: "checkin", label: t("ticket_scan_title") });
       }
       return tabs;
     },
-    [t, isActiveOffer, isPublishedOffer]
+    [t, canUseTickets, isPublishedOffer]
   );
   const tabParam = searchParams?.get("tab") || "";
   const lastTabParamRef = useRef(tabParam);
@@ -191,7 +193,7 @@ export default function MyOfferDetailsPage() {
   };
 
   const loadCheckins = async () => {
-    if (!offer?.id) return;
+    if (!offer?.id || !isTicketingEnabled) return;
     setCheckedInError("");
     try {
       const payload = await apiRequest(`offers/${offer.id}/checkins?limit=15`);
@@ -217,9 +219,9 @@ export default function MyOfferDetailsPage() {
 
   useEffect(() => {
     if (!offer?.id) return;
-    if (!isActiveOffer) return;
+    if (!canUseTickets) return;
     loadCheckins();
-  }, [offer?.id, t, isActiveOffer]);
+  }, [offer?.id, t, canUseTickets]);
 
   useEffect(() => {
     if (tabParam === lastTabParamRef.current) return;
@@ -236,20 +238,20 @@ export default function MyOfferDetailsPage() {
       setOwnerTab("participants");
       return;
     }
-    if (tabParam === "checkin" && isActiveOffer && ownerTab !== "checkin") {
+    if (tabParam === "checkin" && canUseTickets && ownerTab !== "checkin") {
       setOwnerTab("checkin");
     }
-  }, [tabParam, isPublishedOffer, isActiveOffer, ownerTab]);
+  }, [tabParam, isPublishedOffer, canUseTickets, ownerTab]);
 
   useEffect(() => {
     if (!isPublishedOffer && ownerTab !== "overview") {
       setOwnerTab("overview");
       return;
     }
-    if (!isActiveOffer && ownerTab === "checkin") {
+    if (!canUseTickets && ownerTab === "checkin") {
       setOwnerTab("overview");
     }
-  }, [isActiveOffer, isPublishedOffer, ownerTab]);
+  }, [canUseTickets, isPublishedOffer, ownerTab]);
 
   useEffect(() => {
     setScanResult(null);
@@ -581,6 +583,7 @@ export default function MyOfferDetailsPage() {
   };
 
   const handleOpenPresents = () => {
+    if (!isTicketingEnabled) return;
     setPresentsOpen(true);
     loadCheckins();
   };
@@ -1001,24 +1004,26 @@ export default function MyOfferDetailsPage() {
                       {pendingCount}
                     </p>
                   </button>
-                  <button
-                    type="button"
-                    onClick={handleOpenPresents}
-                    className="rounded-2xl bg-success-500/10 p-3 text-left transition hover:-translate-y-0.5 hover:bg-success-500/15 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-success-500/40"
-                  >
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-success-700">
-                      {t("ticket_checked_in_count")}
-                    </p>
-                    <p className="mt-2 text-lg font-semibold text-success-700">
-                      {presentCount}
-                    </p>
-                  </button>
+                  {isTicketingEnabled ? (
+                    <button
+                      type="button"
+                      onClick={handleOpenPresents}
+                      className="rounded-2xl bg-success-500/10 p-3 text-left transition hover:-translate-y-0.5 hover:bg-success-500/15 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-success-500/40"
+                    >
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-success-700">
+                        {t("ticket_checked_in_count")}
+                      </p>
+                      <p className="mt-2 text-lg font-semibold text-success-700">
+                        {presentCount}
+                      </p>
+                    </button>
+                  ) : null}
                 </div>
               </div>
             </>
           ) : null}
 
-          {ownerTab === "checkin" && isPublishedOffer && isActiveOffer ? (
+          {ownerTab === "checkin" && isPublishedOffer && canUseTickets ? (
             <>
               <div className="rounded-3xl border border-[#EADAF1] bg-white p-5">
                 <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1535,12 +1540,6 @@ export default function MyOfferDetailsPage() {
             disabled={!shareUrl}
           />
         </div>
-        <Button
-          variant="outline"
-          label={t("Close")}
-          className="mt-3 w-full"
-          onClick={handleCloseShare}
-        />
         {shareFeedback ? (
           <p className="mt-3 text-xs text-secondary-500">
             {shareFeedback}
@@ -1605,6 +1604,12 @@ export default function MyOfferDetailsPage() {
             </>
           ) : null}
         </div>
+        <Button
+          variant="outline"
+          label={t("Close")}
+          className="mt-4 w-full"
+          onClick={handleCloseShare}
+        />
       </Modal>
 
       <Modal

@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 
 import Button from "../../../../../../components/ui/button";
+import Checkbox from "../../../../../../components/ui/checkbox";
 import Input from "../../../../../../components/ui/input";
 import { useI18n } from "../../../../../../components/i18n-provider";
 import { apiRequest } from "../../../../../lib/api-client";
@@ -105,7 +106,8 @@ export default function EditMyOfferPage() {
     address: "",
     max_participants: "",
     description: "",
-    dynamic_questions: {}
+    dynamic_questions: {},
+    ticketing_enabled: true
   });
 
   useEffect(() => {
@@ -158,7 +160,8 @@ export default function EditMyOfferPage() {
           description: offerData?.description || "",
           dynamic_questions: normalizeDynamicAnswers(
             offerData?.dynamic_answers
-          )
+          ),
+          ticketing_enabled: offerData?.ticketing_enabled !== false
         });
 
         setStatus("ready");
@@ -183,12 +186,13 @@ export default function EditMyOfferPage() {
   }, [categories, formValues.category_id]);
 
   const subCategories = selectedCategory?.children || [];
-  const isDraft = Boolean(offer?.is_draft) || offer?.status === "draft";
-  const isActionDisabled =
-    isSaving ||
-    isPublishing ||
-    status !== "ready" ||
-    (offer?.participants_count || 0) > 1;
+    const isDraft = Boolean(offer?.is_draft) || offer?.status === "draft";
+    const isTicketingLocked = (offer?.participants_count || 0) > 1;
+    const isActionDisabled =
+      isSaving ||
+      isPublishing ||
+      status !== "ready" ||
+      isTicketingLocked;
 
   const updateField = (field, value) => {
     setFormValues((prev) => ({ ...prev, [field]: value }));
@@ -246,6 +250,7 @@ export default function EditMyOfferPage() {
         : null,
       description: formValues.description.trim(),
       dynamic_questions: cleanedDynamicQuestions,
+      ticketing_enabled: Boolean(formValues.ticketing_enabled),
       save_as_draft: Boolean(saveAsDraft)
     };
 
@@ -499,6 +504,18 @@ export default function EditMyOfferPage() {
         error={normalizeFieldError(fieldErrors, "max_participants")}
         placeholder={t("offers.max_participants_placeholder")}
       />
+
+      <div className="rounded-2xl border border-[#EADAF1] bg-white p-4">
+        <Checkbox
+          label={t("offers.ticketing_label")}
+          checked={Boolean(formValues.ticketing_enabled)}
+          onChange={(nextValue) => updateField("ticketing_enabled", nextValue)}
+          disabled={isTicketingLocked}
+        />
+        <p className="mt-2 text-xs text-secondary-400">
+          {t("offers.ticketing_hint")}
+        </p>
+      </div>
 
       <div className="space-y-1">
         <label className="mb-1 block text-lg text-primary-500">

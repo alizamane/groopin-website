@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import Button from "../../../../../components/ui/button";
+import Checkbox from "../../../../../components/ui/checkbox";
 import Input from "../../../../../components/ui/input";
 import { useI18n } from "../../../../../components/i18n-provider";
 import { apiRequest } from "../../../../lib/api-client";
@@ -94,7 +95,8 @@ export default function CreateOfferPage() {
     address: "",
     max_participants: "",
     description: "",
-    dynamic_questions: {}
+    dynamic_questions: {},
+    ticketing_enabled: true
   });
 
   useEffect(() => {
@@ -177,7 +179,8 @@ export default function CreateOfferPage() {
         ? Number(formValues.max_participants)
         : null,
       description: formValues.description.trim(),
-      dynamic_questions: cleanedDynamicQuestions
+      dynamic_questions: cleanedDynamicQuestions,
+      ticketing_enabled: Boolean(formValues.ticketing_enabled)
     };
 
     try {
@@ -428,6 +431,17 @@ export default function CreateOfferPage() {
         error={normalizeFieldError(fieldErrors, "max_participants")}
         placeholder={t("offers.max_participants_placeholder")}
       />
+
+      <div className="rounded-2xl border border-[#EADAF1] bg-white p-4">
+        <Checkbox
+          label={t("offers.ticketing_label")}
+          checked={Boolean(formValues.ticketing_enabled)}
+          onChange={(nextValue) => updateField("ticketing_enabled", nextValue)}
+        />
+        <p className="mt-2 text-xs text-secondary-400">
+          {t("offers.ticketing_hint")}
+        </p>
+      </div>
 
       <div className="space-y-1">
         <label className="mb-1 block text-lg text-primary-500">

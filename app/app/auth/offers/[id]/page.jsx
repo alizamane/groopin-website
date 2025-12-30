@@ -282,7 +282,7 @@ export default function OfferDetailsPage() {
     let active = true;
     const isOwnerView = offer?.owner?.id === currentUser?.id;
     const isParticipantView = Boolean(offer?.auth_user_is_participant);
-    if (!offer?.id || !isParticipantView || isOwnerView) {
+    if (!offer?.id || !isParticipantView || isOwnerView || !isTicketingEnabled) {
       setTicket(null);
       setTicketStatus("idle");
       setTicketError("");
@@ -298,12 +298,26 @@ export default function OfferDetailsPage() {
         const payload = await apiRequest(`offers/${offer.id}/ticket`);
         if (!active) return;
         setTicket(payload?.data || null);
+        if (payload?.data?.status === "revoked") {
+          setTicketError(t("ticket_revoked"));
+        }
         setTicketStatus("ready");
       } catch (error) {
         if (!active) return;
         setTicket(null);
         setTicketStatus("error");
-        setTicketError(error?.message || t("ticket_unavailable"));
+        const errorMessage = String(error?.message || "");
+        if (error?.data?.status === "revoked" || error?.status === 410) {
+          setTicketError(t("ticket_revoked"));
+        } else if (
+          error?.data?.status === "not_found" ||
+          error?.status === 404 ||
+          errorMessage.includes("No query results for model")
+        ) {
+          setTicketError(t("ticket_not_found"));
+        } else {
+          setTicketError(error?.message || t("ticket_unavailable"));
+        }
       }
     };
 
@@ -312,7 +326,14 @@ export default function OfferDetailsPage() {
     return () => {
       active = false;
     };
-  }, [offer?.id, offer?.auth_user_is_participant, offer?.owner?.id, currentUser?.id, t]);
+  }, [
+    offer?.id,
+    offer?.auth_user_is_participant,
+    offer?.owner?.id,
+    offer?.ticketing_enabled,
+    currentUser?.id,
+    t
+  ]);
 
   if (status === "loading") {
     return <OfferDetailsSkeleton />;
@@ -354,6 +375,7 @@ export default function OfferDetailsPage() {
   const maxParticipantsLabel = maxParticipants ?? "-";
   const isOwner = currentUser && offer?.owner?.id === currentUser.id;
   const isParticipant = Boolean(offer?.auth_user_is_participant);
+  const isTicketingEnabled = offer?.ticketing_enabled !== false;
   const isPending = Boolean(offer?.auth_user_is_pending_participant);
   const isClosed = Boolean(offer?.is_closed) || offer?.status === "closed";
   const isActiveOffer = Boolean(
@@ -399,8 +421,9 @@ export default function OfferDetailsPage() {
   );
   const conversationId = offer?.conversation_id;
   const canOpenChat = Boolean(conversationId) && (isOwner || isParticipant);
-  const canShowTicket = isParticipant && !isOwner;
-  const ticketToken = ticket?.token || "";
+  const canShowTicket = isParticipant && !isOwner && isTicketingEnabled;
+  const isTicketRevoked = ticket?.status === "revoked";
+  const ticketToken = isTicketRevoked ? "" : ticket?.token || "";
   const ticketStatusLabel = ticket?.checked_in_at
     ? t("ticket_checked_at", {
         time: formatCheckedAt(ticket.checked_in_at)
@@ -1010,35 +1033,37 @@ export default function OfferDetailsPage() {
                   {ticketStatusLabel}
                 </span>
               </div>
-              <p className="mt-3 text-sm text-secondary-500">
-                {t("ticket_qr_hint")}
-              </p>
               {ticketStatus === "loading" ? (
                 <div className="mt-4 h-36 animate-pulse rounded-2xl bg-neutral-100" />
               ) : ticketToken ? (
-                <div className="mt-4 flex flex-col items-center gap-4">
-                  <div className="relative rounded-3xl border border-[#EADAF1] bg-white p-3">
-                    <QrCodeCanvas
-                      value={ticketToken}
-                      size={200}
-                      margin={10}
-                      color="#B12587"
-                      backgroundColor="#ffffff"
-                      gradientColors={["#662483", "#822485", "#B12587"]}
-                      ecc="H"
-                      className="h-48 w-48"
-                    />
-                    <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-md">
-                        <img
-                          src="/assets/images/splash-icon.png"
-                          alt="Groopin"
-                          className="h-8 w-8 object-contain"
-                        />
+                <>
+                  <p className="mt-3 text-sm text-secondary-500">
+                    {t("ticket_qr_hint")}
+                  </p>
+                  <div className="mt-4 flex flex-col items-center gap-4">
+                    <div className="relative rounded-3xl border border-[#EADAF1] bg-white p-3">
+                      <QrCodeCanvas
+                        value={ticketToken}
+                        size={200}
+                        margin={10}
+                        color="#B12587"
+                        backgroundColor="#ffffff"
+                        gradientColors={["#662483", "#822485", "#B12587"]}
+                        ecc="H"
+                        className="h-48 w-48"
+                      />
+                      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-md">
+                          <img
+                            src="/assets/images/splash-icon.png"
+                            alt="Groopin"
+                            className="h-8 w-8 object-contain"
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
+                </>
               ) : (
                 <p className="mt-4 text-sm text-secondary-500">
                   {ticketError || t("ticket_unavailable")}
@@ -1160,7 +1185,7 @@ export default function OfferDetailsPage() {
                 }}
               />
             </div>
-            {isOwner && isActiveOffer ? (
+            {isOwner && isActiveOffer && isTicketingEnabled ? (
               <div className="mt-5 rounded-2xl border border-[#EADAF1] bg-white p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary-700">
@@ -1249,12 +1274,6 @@ export default function OfferDetailsPage() {
             disabled={!shareUrl}
           />
         </div>
-        <Button
-          variant="outline"
-          label={t("Close")}
-          className="mt-3 w-full"
-          onClick={handleCloseShare}
-        />
         {shareFeedback ? (
           <p className="mt-3 text-xs text-secondary-500">
             {shareFeedback}
@@ -1319,6 +1338,12 @@ export default function OfferDetailsPage() {
             </>
           ) : null}
         </div>
+        <Button
+          variant="outline"
+          label={t("Close")}
+          className="mt-4 w-full"
+          onClick={handleCloseShare}
+        />
       </Modal>
 
       <Modal
