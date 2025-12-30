@@ -56,7 +56,10 @@ const formatTimeRemaining = (milliseconds, t) => {
   }
 
   // Less than 1 day: show hours and minutes
-  return `${hours}${hoursUnit} ${displayMinutes}${minutesUnit}`;
+  if (hours > 0) {
+    return `${hours}${hoursUnit} ${displayMinutes}${minutesUnit}`;
+  }
+  return `${displayMinutes}${minutesUnit}`;
 };
 
 export default function OfferCard({ offer, currentUserId }) {
@@ -307,8 +310,8 @@ export default function OfferCard({ offer, currentUserId }) {
                     {ownerFullName}
                   </p>
                   {isOwner && pendingCount > 0 && !isClosed ? (
-                    <span className="flex items-center gap-1 rounded-full bg-secondary-500 px-2 py-1 text-[10px] font-semibold text-white shadow-sm">
-                      <UserPlusIcon size={12} className="text-white" />
+                    <span className="flex items-center gap-1.5 rounded-full bg-secondary-500 px-3 py-1.5 text-xs font-semibold text-white shadow-sm">
+                      <UserPlusIcon size={14} className="text-white" />
                       {pendingCount > 99 ? "99" : pendingCount}
                     </span>
                   ) : null}
