@@ -97,6 +97,14 @@ const parseMultiValue = (value) => {
   return [String(value)];
 };
 
+const formatCategoryLabel = (label) => {
+  if (!label) return "";
+  if (label.toLowerCase() === "voyage et nature") {
+    return "Voyage et Nature";
+  }
+  return label;
+};
+
 export default function CreateOfferPage() {
   const router = useRouter();
   const { t } = useI18n();
@@ -310,7 +318,7 @@ export default function CreateOfferPage() {
                     className={isActive ? "text-white" : "text-primary-800"}
                   />
                 ) : null}
-                {category.name}
+                {formatCategoryLabel(category.name)}
               </button>
             );
           })}
@@ -337,7 +345,7 @@ export default function CreateOfferPage() {
             <option value="">{t("offers.sub_category_placeholder")}</option>
             {subCategories.map((category) => (
               <option key={category.id} value={category.id}>
-                {category.name}
+                {formatCategoryLabel(category.name)}
               </option>
             ))}
           </select>
