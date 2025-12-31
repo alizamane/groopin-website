@@ -432,7 +432,7 @@
     "end_time": "Heure de fin",
     "end_time_placeholder": "Entrez l'heure de fin",
     "extra_questions": "Préférences du Groop",
-    "multi_select_placeholder": "La selection multiple possible",
+    "multi_select_placeholder": "La sélection multiple est possible",
     "ticketing_label": "Activer la billetterie pour cette offre",
     "ticketing_hint": "Génère des billets et des QR codes pour les participants.",
     "max_participants": "Nombre maximum de participants",

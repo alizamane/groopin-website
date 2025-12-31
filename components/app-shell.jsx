@@ -10,8 +10,16 @@ import {
   BellIcon,
   ChatBubbleLeftRightIcon,
   ChevronDoubleUpIcon,
+  ClipboardDocumentCheckIcon,
+  ClipboardDocumentListIcon,
+  Cog6ToothIcon,
+  EnvelopeIcon,
+  HeartIcon,
   HomeIcon,
-  MegaphoneIcon
+  InformationCircleIcon,
+  BookOpenIcon,
+  MegaphoneIcon,
+  UserGroupIcon
 } from "./ui/heroicons";
 import UserAvatar from "./user/user-avatar";
 import { useI18n } from "./i18n-provider";
@@ -33,13 +41,39 @@ export default function AppShell({ children }) {
   const [webPushReady, setWebPushReady] = useState(false);
 
   const menuItems = [
-    { label: t("Favorites"), href: "/app/auth/favorites" },
-    { label: t("Participating"), href: "/app/auth/participating" },
-    { label: t("Settings"), href: "/app/auth/drawer/settings" },
-    { label: t("FAQ"), href: "/app/auth/drawer/faq" },
-    { label: t("Terms"), href: "/app/auth/terms-and-conditions" },
-    { label: t("policy of use"), href: "/app/auth/policy-of-use" },
-    { label: t("Us"), href: "/app/auth/drawer/us" }
+    { label: t("Favorites"), href: "/app/auth/favorites", icon: HeartIcon },
+    {
+      label: t("Participating"),
+      href: "/app/auth/participating",
+      icon: UserGroupIcon
+    },
+    {
+      label: t("Settings"),
+      href: "/app/auth/drawer/settings",
+      icon: Cog6ToothIcon
+    },
+    { divider: true },
+    {
+      label: t("FAQ"),
+      href: "/app/auth/drawer/faq",
+      icon: InformationCircleIcon
+    },
+    {
+      label: t("Terms"),
+      href: "/app/auth/terms-and-conditions",
+      icon: ClipboardDocumentCheckIcon
+    },
+    {
+      label: t("policy of use"),
+      href: "/app/auth/policy-of-use",
+      icon: ClipboardDocumentListIcon
+    },
+    { label: t("Us"), href: "/app/auth/drawer/us", icon: BookOpenIcon },
+    {
+      label: t("Contact us"),
+      onClick: () => (window.location.href = "mailto:contact@groopin.io"),
+      icon: EnvelopeIcon
+    }
   ];
 
   const refreshNotificationsCount = useCallback(async () => {
@@ -281,12 +315,13 @@ export default function AppShell({ children }) {
       >
         {user ? (
           <div className="space-y-6 border-b border-[#D0D0D4] pb-6">
-          <div className="flex flex-col items-center gap-3">
+            <div className="flex flex-col items-center gap-3">
               <UserAvatar user={user} size={90} withBorder />
               <p className="text-2xl font-semibold text-primary-800">
                 {user.name || `${user.first_name} ${user.last_name}`}
               </p>
-              <div className="rounded-full border border-[#EADAF1] px-3 py-2 text-sm text-secondary-400">
+              <div className="flex items-center gap-2 rounded-full border border-[#EADAF1] px-3 py-2 text-sm text-secondary-400">
+                <MegaphoneIcon size={20} className="text-primary-800" />
                 {t("number_of_created_offers", {
                   count: user.owning_offers_count || 0
                 })}
@@ -295,19 +330,50 @@ export default function AppShell({ children }) {
           </div>
         ) : null}
 
-        <nav className="mt-6 space-y-3 text-sm font-medium text-secondary-400">
-          {menuItems.map((item) => (
-            <Link key={item.href} href={item.href} className="block">
-              {item.label}
-            </Link>
-          ))}
-          <button
-            type="button"
-            className="mt-4 text-left text-sm font-medium text-secondary-400"
-            onClick={() => (window.location.href = "mailto:contact@groopin.io")}
-          >
-            {t("Contact us")}
-          </button>
+        <nav className="mt-6 flex flex-col text-secondary-400">
+          {menuItems.map((item, index) => {
+            if (item.divider) {
+              return (
+                <div
+                  key={`divider-${index}`}
+                  className="my-5 h-px w-1/2 self-center bg-[#D0D0D4]"
+                />
+              );
+            }
+
+            const Icon = item.icon;
+            const content = (
+              <>
+                {Icon ? <Icon size={24} className="text-secondary-400" /> : null}
+                <span className="text-[15px] font-medium text-secondary-400">
+                  {item.label}
+                </span>
+              </>
+            );
+
+            if (item.href) {
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="flex items-center gap-2 py-2"
+                >
+                  {content}
+                </Link>
+              );
+            }
+
+            return (
+              <button
+                key={`action-${item.label}-${index}`}
+                type="button"
+                className="flex items-center gap-2 py-2 text-left"
+                onClick={item.onClick}
+              >
+                {content}
+              </button>
+            );
+          })}
         </nav>
 
         <div className="mt-10 text-center text-sm text-secondary-400">
