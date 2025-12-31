@@ -15,7 +15,7 @@ export default function Checkbox({
     >
       <input
         type="checkbox"
-        className="h-5 w-5 rounded border-neutral-300 text-primary-500 focus:ring-primary-400"
+        className="h-5 w-5 rounded border-neutral-300 text-[#B12587] focus:ring-[#B12587]"
         checked={checked}
         disabled={disabled}
         onChange={(event) => onChange?.(event.target.checked)}

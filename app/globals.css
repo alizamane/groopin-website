@@ -55,3 +55,11 @@ body {
   opacity: 1;
   filter: invert(27%) sepia(52%) saturate(1900%) hue-rotate(280deg) brightness(92%) contrast(95%);
 }
+
+@media (max-width: 640px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
