@@ -334,6 +334,7 @@ export default function ProfilePage() {
                     key={offer.id}
                     offer={offer}
                     currentUserId={user.id}
+                    showRating
                   />
                 ))}
               </div>
@@ -355,6 +356,7 @@ export default function ProfilePage() {
                     key={offer.id}
                     offer={offer}
                     currentUserId={user.id}
+                    showRating
                   />
                 ))}
               </div>

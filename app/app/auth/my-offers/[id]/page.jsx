@@ -28,6 +28,22 @@ const drawRoundedRect = (ctx, x, y, width, height, radius) => {
   ctx.closePath();
 };
 
+const RatingStarIcon = ({ filled }) => (
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill={filled ? "#B12587" : "none"}
+    stroke="#B12587"
+    strokeWidth="1.6"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M12 3.5 14.8 9l5.9.9-4.3 4.2 1 5.8L12 17.8 6.6 19.9l1-5.8-4.3-4.2L9.2 9 12 3.5Z" />
+  </svg>
+);
+
 const loadImage = (src) =>
   new Promise((resolve, reject) => {
     if (!src) {
@@ -106,6 +122,11 @@ export default function MyOfferDetailsPage() {
   );
   const isTicketingEnabled = offer?.ticketing_enabled !== false;
   const canUseTickets = isActiveOffer && isTicketingEnabled;
+  const ratingEntries = Array.isArray(offer?.ratings) ? offer.ratings : [];
+  const visibleRatings = ratingEntries.filter((entry) => {
+    const value = Number(entry?.rating ?? 0);
+    return Number.isFinite(value) && value > 0;
+  });
   const ownerTabs = useMemo(
     () => {
       if (!isPublishedOffer) {
@@ -1239,6 +1260,52 @@ export default function MyOfferDetailsPage() {
               </div>
             </div>
           </div>
+
+          {visibleRatings.length ? (
+            <div className="rounded-3xl border border-[#EADAF1] bg-white p-5">
+              <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-primary-700">
+                {t("ratings")}
+              </h3>
+              <div className="mt-4 space-y-3">
+                {visibleRatings.map((rating, index) => {
+                  const ratingValue = Number(rating?.rating ?? 0);
+                  const rater = rating?.rater;
+                  const raterName =
+                    rater?.name ||
+                    [rater?.first_name, rater?.last_name]
+                      .filter(Boolean)
+                      .join(" ") ||
+                    t("Participants");
+                  return (
+                    <div
+                      key={rating?.id ?? `rating-${index}`}
+                      className="rounded-2xl bg-[#F7F1FA] px-4 py-3"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <UserAvatar user={rater} size={36} />
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-primary-900">
+                              {raterName}
+                            </p>
+                            {rating?.comment ? (
+                              <p className="mt-1 text-xs text-secondary-500">
+                                {rating.comment}
+                              </p>
+                            ) : null}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 text-sm font-semibold text-primary-700">
+                          <RatingStarIcon filled />
+                          <span>{ratingValue.toFixed(1)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
 
           <div className="rounded-3xl border border-[#EADAF1] bg-white p-5">
             <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-primary-700">

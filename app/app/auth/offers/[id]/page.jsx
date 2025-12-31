@@ -450,6 +450,11 @@ export default function OfferDetailsPage() {
     locale === "fr" ? "fr-FR" : locale === "ar" ? "ar-MA" : "en-GB";
   const ownerRating = Number(offer?.owner?.average_rating ?? offer?.owner?.rating ?? null);
   const showOwnerRating = Number.isFinite(ownerRating) && ownerRating > 0;
+  const ratingEntries = Array.isArray(offer?.ratings) ? offer.ratings : [];
+  const visibleRatings = ratingEntries.filter((entry) => {
+    const value = Number(entry?.rating ?? 0);
+    return Number.isFinite(value) && value > 0;
+  });
   const isActionDisabled = isOwner || isParticipant || isPending || isClosed;
   const actionLabel = isOwner
     ? t("My offer")
@@ -1218,6 +1223,49 @@ export default function OfferDetailsPage() {
         </section>
 
         <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
+          {isOwner && visibleRatings.length ? (
+            <div className={cardBase}>
+              <h3 className={sectionTitle}>{t("ratings")}</h3>
+              <div className="mt-4 space-y-3">
+                {visibleRatings.map((rating, index) => {
+                  const ratingValue = Number(rating?.rating ?? 0);
+                  const rater = rating?.rater;
+                  const raterName =
+                    rater?.name ||
+                    [rater?.first_name, rater?.last_name]
+                      .filter(Boolean)
+                      .join(" ") ||
+                    t("Participants");
+                  return (
+                    <div
+                      key={rating?.id ?? `rating-${index}`}
+                      className="rounded-2xl bg-[#F7F1FA] px-4 py-3"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <UserAvatar user={rater} size={36} />
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-primary-900">
+                              {raterName}
+                            </p>
+                            {rating?.comment ? (
+                              <p className="mt-1 text-xs text-secondary-500">
+                                {rating.comment}
+                              </p>
+                            ) : null}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 text-sm font-semibold text-primary-700">
+                          <RatingStarIcon filled />
+                          <span>{ratingValue.toFixed(1)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
           <div className={cardBase}>
             <h3 className={sectionTitle}>Actions</h3>
             <div className="mt-4 flex flex-wrap gap-3">

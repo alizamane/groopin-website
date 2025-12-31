@@ -62,7 +62,11 @@ const formatTimeRemaining = (milliseconds, t) => {
   return `${displayMinutes}${minutesUnit}`;
 };
 
-export default function OfferCard({ offer, currentUserId }) {
+export default function OfferCard({
+  offer,
+  currentUserId,
+  showRating = false
+}) {
   const pathname = usePathname();
   const { t, locale } = useI18n();
   const [actionState, setActionState] = useState("idle");
@@ -129,6 +133,15 @@ export default function OfferCard({ offer, currentUserId }) {
     getLocalizedText(offer?.category?.name, locale) || t("Groops");
   const titleLabel = getLocalizedText(offer?.title, locale) || t("offers.title");
   const isOwner = offer?.owner?.id === currentUserId;
+  const ratingRaw =
+    offer?.auth_user_rating ??
+    offer?.average_rating ??
+    offer?.ratings_avg_rating ??
+    offer?.rating ??
+    null;
+  const ratingValue =
+    typeof ratingRaw === "string" ? Number(ratingRaw) : ratingRaw;
+  const hasRatingValue = Number.isFinite(ratingValue) && ratingValue > 0;
   const isOffersContext =
     pathname === "/app/auth/drawer/tabs" ||
     pathname?.startsWith("/app/auth/offers");
@@ -309,12 +322,20 @@ export default function OfferCard({ offer, currentUserId }) {
                   <p className="truncate text-sm font-semibold text-primary-900">
                     {ownerFullName}
                   </p>
-                  {isOwner && pendingCount > 0 && !isClosed ? (
-                    <span className="flex items-center gap-1.5 rounded-full bg-secondary-500 px-3 py-1.5 text-xs font-semibold text-white shadow-sm">
-                      <UserPlusIcon size={14} className="text-white" />
-                      {pendingCount > 99 ? "99" : pendingCount}
-                    </span>
-                  ) : null}
+                  <div className="flex items-center gap-2">
+                    {showRating && isClosed && hasRatingValue ? (
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-primary-600">
+                        <StarIcon filled />
+                        {ratingValue.toFixed(1)}
+                      </span>
+                    ) : null}
+                    {isOwner && pendingCount > 0 && !isClosed ? (
+                      <span className="flex items-center gap-1.5 rounded-full bg-secondary-500 px-3 py-1.5 text-xs font-semibold text-white shadow-sm">
+                        <UserPlusIcon size={14} className="text-white" />
+                        {pendingCount > 99 ? "99" : pendingCount}
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
                 <div className="mt-1 min-h-[28px]">
                   <UsersAvatarsList
@@ -414,5 +435,22 @@ export default function OfferCard({ offer, currentUserId }) {
         </div>
       </Modal>
     </>
+  );
+}
+
+function StarIcon({ filled }) {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill={filled ? "#B12587" : "none"}
+      stroke="#B12587"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M12 3.5 14.8 9l5.9.9-4.3 4.2 1 5.8L12 17.8 6.6 19.9l1-5.8-4.3-4.2L9.2 9 12 3.5Z" />
+    </svg>
   );
 }
