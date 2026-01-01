@@ -637,17 +637,17 @@ export default function ProfileEditPage() {
 
           <div className="flex flex-col gap-3 sm:flex-row">
             <Button
+              label={isUploading ? t("profile.uploading") : t("Confirm")}
+              className="w-full"
+              onClick={handleCropConfirm}
+              disabled={!isCropReady || isUploading}
+            />
+            <Button
               variant="outline"
               label={t("Cancel")}
               className="w-full"
               onClick={() => cleanupCropState()}
               disabled={isUploading}
-            />
-            <Button
-              label={isUploading ? t("profile.uploading") : t("Confirm")}
-              className="w-full"
-              onClick={handleCropConfirm}
-              disabled={!isCropReady || isUploading}
             />
           </div>
         </div>
