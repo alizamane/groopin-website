@@ -311,7 +311,7 @@ export default function AppShell({ children }) {
       <aside
         className={`fixed left-0 top-0 z-50 h-full w-80 bg-white px-6 pb-6 pt-10 shadow-xl transition ${
           drawerOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
+        } flex flex-col overflow-y-auto overscroll-contain`}
       >
         {user ? (
           <div className="space-y-6 border-b border-[#D0D0D4] pb-6">
