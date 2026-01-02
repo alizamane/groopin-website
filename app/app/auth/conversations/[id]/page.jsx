@@ -8,6 +8,7 @@ import Button from "../../../../../components/ui/button";
 import { ArrowLeftIcon, PaperAirplaneIcon } from "../../../../../components/ui/heroicons";
 import { useI18n } from "../../../../../components/i18n-provider";
 import { apiRequest } from "../../../../lib/api-client";
+import { getEcho } from "../../../../lib/realtime-client";
 import { getUser } from "../../../../lib/session";
 
 const formatDay = (value, locale) => {
@@ -41,12 +42,19 @@ export default function ConversationPage() {
   const [sendState, setSendState] = useState("idle");
   const [sendError, setSendError] = useState("");
   const [conversation, setConversation] = useState(null);
+  const [readStates, setReadStates] = useState([]);
+  const [typingUsers, setTypingUsers] = useState([]);
   const currentUser = getUser();
   const bottomRef = useRef(null);
   const firstScrollRef = useRef(true);
   const messagesRef = useRef([]);
   const lastRemoteSignatureRef = useRef("");
   const lastConversationStampRef = useRef("");
+  const lastReadSentRef = useRef(0);
+  const typingTimeoutRef = useRef(null);
+  const typingSentAtRef = useRef(0);
+  const typingStateRef = useRef(false);
+  const typingCleanupRef = useRef(new Map());
   const dateLocale =
     locale === "fr" ? "fr-FR" : locale === "ar" ? "ar-MA" : "en-US";
 
@@ -63,20 +71,51 @@ export default function ConversationPage() {
     messagesRef.current = messages;
   }, [messages]);
 
+  const normalizeMessage = (message) => {
+    if (!message) return null;
+    return {
+      id: message.id,
+      content: message.content,
+      type: message.type,
+      automatic: Boolean(message.automatic),
+      created_at: message.created_at,
+      user: message.user
+        ? {
+            id: message.user.id,
+            first_name: message.user.first_name,
+            last_name: message.user.last_name,
+            name: message.user.name
+          }
+        : null
+    };
+  };
+
+  const mergeIncomingMessage = (incoming) => {
+    if (!incoming?.id) return;
+    setMessages((prev) => {
+      if (prev.some((message) => message.id === incoming.id)) {
+        return prev;
+      }
+      return [...prev, incoming];
+    });
+  };
+
   const fetchMessages = async () => {
     setStatus("loading");
     try {
       const payload = await apiRequest(
-        `conversations/${params.id}/messages`,
+        `conversations/${params.id}/messages?lite=1`,
         { cache: false }
       );
       const remoteMessages = payload?.data || [];
       const conversationData = payload?.meta?.conversation || null;
+      const remoteReadStates = payload?.meta?.read_states || [];
       lastRemoteSignatureRef.current = buildMessageSignature(remoteMessages);
       lastConversationStampRef.current =
         conversationData?.last_message_at || "";
       setMessages(remoteMessages);
       setConversation(conversationData);
+      setReadStates(remoteReadStates);
       setError("");
       setStatus("ready");
     } catch (err) {
@@ -88,11 +127,12 @@ export default function ConversationPage() {
   const refreshMessages = async () => {
     try {
       const payload = await apiRequest(
-        `conversations/${params.id}/messages`,
+        `conversations/${params.id}/messages?lite=1`,
         { cache: false }
       );
       const remoteMessages = payload?.data || [];
       const conversationData = payload?.meta?.conversation || null;
+      const remoteReadStates = payload?.meta?.read_states || [];
       const remoteSignature = buildMessageSignature(remoteMessages);
       const conversationStamp = conversationData?.last_message_at || "";
       const hasTempMessages = messagesRef.current.some(
@@ -110,6 +150,7 @@ export default function ConversationPage() {
           setConversation(conversationData);
           lastConversationStampRef.current = conversationStamp;
         }
+        setReadStates(remoteReadStates);
         setStatus((prev) => (prev === "error" ? "ready" : prev));
         return;
       }
@@ -130,6 +171,7 @@ export default function ConversationPage() {
         });
         return [...remoteMessages, ...filteredTemps];
       });
+      setReadStates(remoteReadStates);
       lastRemoteSignatureRef.current = remoteSignature;
       lastConversationStampRef.current = conversationStamp;
       setError("");
@@ -151,9 +193,79 @@ export default function ConversationPage() {
     return () => clearInterval(interval);
   }, [params.id]);
 
+  useEffect(() => {
+    if (!currentUser?.id) return undefined;
+    const echo = getEcho();
+    if (!echo) return undefined;
+
+    const channelName = `App.Models.User.${currentUser.id}`;
+    const channel = echo.private(channelName);
+
+    channel.listen(".message:created", (event) => {
+      const incoming = normalizeMessage(event?.message || event);
+      const conversationId =
+        event?.conversation_id ||
+        event?.message?.conversation?.id ||
+        event?.message?.conversation_id;
+      if (Number(conversationId) !== Number(params.id)) return;
+      if (!incoming) return;
+      mergeIncomingMessage(incoming);
+    });
+
+    channel.listen(".message:read", (event) => {
+      if (Number(event?.conversation_id) !== Number(params.id)) return;
+      const reader = event?.user || {};
+      if (!reader?.id) return;
+      setReadStates((prev) => {
+        const next = prev.filter((item) => item.id !== reader.id);
+        next.push({
+          id: reader.id,
+          first_name: reader.first_name,
+          last_name: reader.last_name,
+          last_read_message_id: event?.message_id ?? null,
+          last_read_at: event?.read_at ?? null
+        });
+        return next;
+      });
+    });
+
+    channel.listen(".message:typing", (event) => {
+      if (Number(event?.conversation_id) !== Number(params.id)) return;
+      const typingUser = event?.user;
+      if (!typingUser?.id || typingUser.id === currentUser?.id) return;
+      const isTyping = Boolean(event?.is_typing);
+
+      setTypingUsers((prev) => {
+        const filtered = prev.filter((user) => user.id !== typingUser.id);
+        return isTyping ? [...filtered, typingUser] : filtered;
+      });
+
+      const timers = typingCleanupRef.current;
+      const existingTimer = timers.get(typingUser.id);
+      if (existingTimer) {
+        clearTimeout(existingTimer);
+        timers.delete(typingUser.id);
+      }
+      if (isTyping) {
+        const timeoutId = setTimeout(() => {
+          setTypingUsers((prev) =>
+            prev.filter((user) => user.id !== typingUser.id)
+          );
+          timers.delete(typingUser.id);
+        }, 3500);
+        timers.set(typingUser.id, timeoutId);
+      }
+    });
+
+    return () => {
+      echo.leave(`private-${channelName}`);
+    };
+  }, [currentUser?.id, params.id]);
+
   const offer = conversation?.offer;
+  const offerOwnerId = offer?.owner?.id || offer?.owner_id;
   const offerHref = offer
-    ? offer.owner?.id === currentUser?.id
+    ? offerOwnerId === currentUser?.id
       ? `/app/auth/my-offers/${offer.id}`
       : `/app/auth/offers/${offer.id}`
     : "";
@@ -164,12 +276,122 @@ export default function ConversationPage() {
     });
   }, [messages]);
 
+  const lastOutgoingMessageId = useMemo(() => {
+    for (let index = sortedMessages.length - 1; index >= 0; index -= 1) {
+      const message = sortedMessages[index];
+      if (!message || message.isTemp || message.automatic) continue;
+      if (message?.user?.id === currentUser?.id) {
+        return message.id;
+      }
+    }
+    return null;
+  }, [sortedMessages, currentUser?.id]);
+
+  const lastOutgoingSeen = useMemo(() => {
+    if (!lastOutgoingMessageId) return false;
+    const lastId = Number(lastOutgoingMessageId);
+    if (!Number.isFinite(lastId)) return false;
+    const otherReaders = readStates.filter(
+      (user) => user.id !== currentUser?.id
+    );
+    if (!otherReaders.length) return false;
+    return otherReaders.every((user) => {
+      const readId = Number(user.last_read_message_id || 0);
+      return readId >= lastId;
+    });
+  }, [lastOutgoingMessageId, readStates, currentUser?.id]);
+
   useEffect(() => {
     if (!bottomRef.current) return;
     const behavior = firstScrollRef.current ? "auto" : "smooth";
     bottomRef.current.scrollIntoView({ behavior, block: "end" });
     firstScrollRef.current = false;
   }, [sortedMessages.length]);
+
+  const sendTyping = async (isTyping) => {
+    if (!currentUser?.id) return;
+    if (typingStateRef.current === isTyping) return;
+    typingStateRef.current = isTyping;
+    try {
+      await apiRequest(`conversations/${params.id}/typing`, {
+        method: "POST",
+        body: { is_typing: Boolean(isTyping) }
+      });
+    } catch {
+      // Ignore typing errors.
+    }
+  };
+
+  const scheduleTyping = (nextValue) => {
+    const trimmed = nextValue.trim();
+    if (!trimmed) {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = null;
+      }
+      sendTyping(false);
+      return;
+    }
+
+    const now = Date.now();
+    if (now - typingSentAtRef.current > 2000) {
+      typingSentAtRef.current = now;
+      sendTyping(true);
+    }
+
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    typingTimeoutRef.current = setTimeout(() => {
+      sendTyping(false);
+    }, 2500);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      sendTyping(false);
+    };
+  }, [params.id, currentUser?.id]);
+
+  const markRead = async (messageId) => {
+    if (!currentUser?.id) return;
+    const numericId = Number(messageId);
+    if (!Number.isFinite(numericId) || numericId <= 0) return;
+    if (numericId <= lastReadSentRef.current) return;
+    lastReadSentRef.current = numericId;
+    try {
+      const payload = await apiRequest(`conversations/${params.id}/read`, {
+        method: "POST",
+        body: { message_id: numericId }
+      });
+      const readData = payload?.data;
+      if (readData?.message_id) {
+        setReadStates((prev) => {
+          const next = prev.filter((user) => user.id !== currentUser?.id);
+          next.push({
+            id: currentUser?.id,
+            first_name: currentUser?.first_name,
+            last_name: currentUser?.last_name,
+            last_read_message_id: readData.message_id,
+            last_read_at: readData.read_at
+          });
+          return next;
+        });
+      }
+    } catch {
+      // Ignore read receipt errors.
+    }
+  };
+
+  useEffect(() => {
+    const lastMessage = sortedMessages[sortedMessages.length - 1];
+    if (!lastMessage || lastMessage.isTemp) return;
+    if (!lastMessage.id) return;
+    markRead(lastMessage.id);
+  }, [sortedMessages, params.id]);
 
   const handleSend = async (event) => {
     event.preventDefault();
@@ -191,12 +413,16 @@ export default function ConversationPage() {
     };
     setMessages((prev) => [...prev, optimisticMessage]);
     setContent("");
+    sendTyping(false);
     try {
-      const response = await apiRequest(`conversations/${params.id}/messages`, {
-        method: "POST",
-        body: { content: trimmed }
-      });
-      const newMessage = response?.data || null;
+      const response = await apiRequest(
+        `conversations/${params.id}/messages?lite=1`,
+        {
+          method: "POST",
+          body: { content: trimmed }
+        }
+      );
+      const newMessage = normalizeMessage(response?.data || null);
       setMessages((prev) =>
         prev.map((message) =>
           message.id === tempId
@@ -323,12 +549,29 @@ export default function ConversationPage() {
                               ? t("Loading more...")
                               : formatTime(message.created_at, dateLocale)}
                           </p>
+                          {isMine &&
+                          !isTemp &&
+                          message.id === lastOutgoingMessageId &&
+                          lastOutgoingSeen ? (
+                            <p className="mt-1 text-[11px] text-secondary-500">
+                              {t("Seen")}
+                            </p>
+                          ) : null}
                         </div>
                       </div>
                     </div>
                   );
                 });
               })()}
+              {typingUsers.length ? (
+                <div className="text-xs text-secondary-400">
+                  {typingUsers
+                    .map((user) => user.first_name || user.name || "")
+                    .filter(Boolean)
+                    .join(", ")}{" "}
+                  {t("is typing...")}
+                </div>
+              ) : null}
               <div ref={bottomRef} />
             </div>
           ) : null}
@@ -341,7 +584,10 @@ export default function ConversationPage() {
       >
         <input
           value={content}
-          onChange={(event) => setContent(event.target.value)}
+          onChange={(event) => {
+            setContent(event.target.value);
+            scheduleTyping(event.target.value);
+          }}
           placeholder={t("Type a message")}
           className="w-full bg-transparent px-2 py-2 text-base text-secondary-600 outline-none"
         />
