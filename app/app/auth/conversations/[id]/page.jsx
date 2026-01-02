@@ -863,7 +863,7 @@ export default function ConversationPage() {
     longPressTimeoutRef.current = setTimeout(() => {
       longPressTimeoutRef.current = null;
       openMessageActions(message);
-    }, 450);
+    }, 700);
   };
 
   const cancelLongPress = () => {
@@ -1275,27 +1275,28 @@ export default function ConversationPage() {
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col rounded-3xl border border-[#EADAF1] bg-white p-4">
+        {pinnedMessage ? (
+          <div className="mb-2 flex items-center gap-3 rounded-2xl border border-[#EADAF1] bg-white px-3 py-2 text-xs text-secondary-500 shadow-sm">
+            <button
+              type="button"
+              onClick={() => scrollToMessage(pinnedMessage.id)}
+              className="flex min-w-0 flex-1 items-center gap-2 text-left"
+            >
+              <MapPinIcon size={14} className="text-secondary-500" />
+              <div className="min-w-0">
+                <p className="truncate text-[11px] text-secondary-500">
+                  {getPinnedPreview(pinnedMessage)}
+                </p>
+              </div>
+            </button>
+          </div>
+        ) : null}
+
         <div
           ref={messagesContainerRef}
           onScroll={handleScroll}
           className="flex-1 overflow-y-auto pr-2"
         >
-          {pinnedMessage ? (
-            <div className="sticky top-0 z-10 mb-3 flex items-center gap-3 rounded-2xl border border-[#EADAF1] bg-white/95 px-3 py-2 text-xs text-secondary-500 shadow-sm backdrop-blur">
-              <button
-                type="button"
-                onClick={() => scrollToMessage(pinnedMessage.id)}
-                className="flex min-w-0 flex-1 items-center gap-2 text-left"
-              >
-                <MapPinIcon size={14} className="text-secondary-500" />
-                <div className="min-w-0">
-                  <p className="truncate text-[11px] text-secondary-500">
-                    {getPinnedPreview(pinnedMessage)}
-                  </p>
-                </div>
-              </button>
-            </div>
-          ) : null}
 
           {isLoadingOlder ? (
             <div className="flex items-center justify-center py-2 text-xs text-secondary-400">
@@ -1692,10 +1693,10 @@ export default function ConversationPage() {
             <button
               type="button"
               onClick={() => setAttachmentMenuOpen((prev) => !prev)}
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-[#EADAF1] text-secondary-600 transition hover:bg-[#F7F1FA]"
+              className="flex h-10 w-10 items-center justify-center text-secondary-700 transition hover:text-secondary-900"
               aria-label={t("poll.create")}
             >
-              <AttachmentIcon size={18} className="text-secondary-600" />
+              <AttachmentIcon size={18} className="text-secondary-700" />
             </button>
           ) : null}
           <input
