@@ -6,7 +6,9 @@ import Image from "next/image";
 const getBgColor = () => "#B12587";
 
 export default function UserAvatar({ user, size = 60, withBorder = false }) {
-  const isDefaultAvatar = user?.uses_default_image;
+  const isDefaultAvatar =
+    user?.uses_default_image === true ||
+    Number(user?.uses_default_image) === 1;
   const avatarUrl =
     user?.avatar_image_url ||
     user?.avatar_url ||
