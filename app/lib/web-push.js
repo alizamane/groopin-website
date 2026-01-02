@@ -54,7 +54,11 @@ const saveSubscription = async (subscription) => {
   return { status: "saved" };
 };
 
-export const ensureWebPushSubscription = async () => {
+export const ensureWebPushSubscription = async (options = {}) => {
+  const {
+    requestPermission = true,
+    forcePrompt = false
+  } = options;
   if (!isSupported()) {
     return { status: "unsupported" };
   }
@@ -65,13 +69,18 @@ export const ensureWebPushSubscription = async () => {
   }
 
   if (Notification.permission === "default") {
+    if (!requestPermission) {
+      return { status: "default" };
+    }
     const alreadyRequested =
       window.localStorage.getItem(PERMISSION_STORAGE_KEY) === "1";
-    if (alreadyRequested) {
+    if (alreadyRequested && !forcePrompt) {
       return { status: "skipped" };
     }
-    window.localStorage.setItem(PERMISSION_STORAGE_KEY, "1");
     const result = await Notification.requestPermission();
+    if (result !== "default") {
+      window.localStorage.setItem(PERMISSION_STORAGE_KEY, "1");
+    }
     if (result !== "granted") {
       return { status: result };
     }

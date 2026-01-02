@@ -195,6 +195,11 @@ export default function AppShell({ children }) {
     ensureWebPushSubscription().catch(() => {});
   }, [user, webPushReady]);
 
+  const handleNotificationsClick = () => {
+    ensureWebPushSubscription({ forcePrompt: true }).catch(() => {});
+    router.push("/app/auth/drawer/notifications");
+  };
+
   useEffect(() => {
     const handleNotificationsUpdate = (event) => {
       const detailCount = event?.detail?.unreadCount;
@@ -288,7 +293,7 @@ export default function AppShell({ children }) {
           </div>
           <button
             type="button"
-            onClick={() => router.push("/app/auth/drawer/notifications")}
+            onClick={handleNotificationsClick}
             className="relative flex items-center justify-center text-primary-800 transition"
           >
             <BellIcon size={22} className="text-primary-800" />
