@@ -1,6 +1,10 @@
 "use client";
 
 import React, { useState } from "react";
+import useSupportedInputType, {
+  getFallbackMeta,
+  isDateLikeType
+} from "./input-support";
 
 export default function Input({
   label,
@@ -8,9 +12,19 @@ export default function Input({
   type = "text",
   className = "",
   inputClassName = "",
+  placeholder,
+  inputMode,
+  pattern,
   ...props
 }) {
   const [focused, setFocused] = useState(false);
+  const resolvedType = useSupportedInputType(type);
+  const isFallback = isDateLikeType(type) && resolvedType === "text";
+  const fallbackMeta = isFallback ? getFallbackMeta(type) : {};
+  const resolvedPlaceholder =
+    placeholder ?? fallbackMeta.placeholder;
+  const resolvedInputMode = inputMode ?? (isFallback ? "numeric" : undefined);
+  const resolvedPattern = pattern ?? fallbackMeta.pattern;
 
   const borderColor = error
     ? "border-danger-600"
@@ -25,8 +39,11 @@ export default function Input({
       ) : null}
       <div className={`rounded-full border-2 px-4 py-3 ${borderColor}`}>
         <input
-          type={type}
+          type={resolvedType}
           className={`w-full bg-transparent text-secondary-400 outline-none placeholder:text-neutral-400 ${inputClassName}`}
+          placeholder={resolvedPlaceholder}
+          inputMode={resolvedInputMode}
+          pattern={resolvedPattern}
           onFocus={(event) => {
             setFocused(true);
             props.onFocus?.(event);

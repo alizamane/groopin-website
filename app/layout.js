@@ -37,10 +37,16 @@ export const metadata = {
   }
 };
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover"
+};
+
 export default function RootLayout({ children }) {
   return (
     <html lang="en" className={lato.variable}>
-      <body className="bg-white text-charcoal-900 font-sans antialiased">
+      <body className="bg-white text-charcoal-900 font-sans antialiased dark:bg-charcoal-950 dark:text-neutral-100">
         <I18nProvider>{children}</I18nProvider>
         <Analytics />
       </body>

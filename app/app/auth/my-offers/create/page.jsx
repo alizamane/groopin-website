@@ -368,7 +368,7 @@ export default function CreateOfferPage() {
       />
 
       <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-3 sm:gap-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
           <Input
             name="start_date"
             label={renderRequiredLabel(t("offers.start_date"))}
@@ -392,7 +392,7 @@ export default function CreateOfferPage() {
             required
           />
         </div>
-        <div className="grid grid-cols-2 gap-3 sm:gap-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
           <Input
             name="end_date"
             label={renderRequiredLabel(t("offers.end_date"))}

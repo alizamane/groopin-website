@@ -6,6 +6,9 @@ import Link from "next/link";
 import OfferCard from "../../../../../components/offers/offer-card";
 import Button from "../../../../../components/ui/button";
 import Modal from "../../../../../components/ui/modal";
+import useSupportedInputType, {
+  getFallbackMeta
+} from "../../../../../components/ui/input-support";
 import { PlusIcon } from "../../../../../components/ui/heroicons";
 import { useI18n } from "../../../../../components/i18n-provider";
 import { apiRequest } from "../../../../lib/api-client";
@@ -137,6 +140,9 @@ export default function TabsHomePage() {
   const [searchValue, setSearchValue] = useState("");
   const user = getUser();
   const latestOfferRequestRef = useRef(0);
+  const dateInputType = useSupportedInputType("date");
+  const dateFallbackMeta =
+    dateInputType === "text" ? getFallbackMeta("date") : {};
 
   const [filters, setFilters] = useState({
     title: "",
@@ -467,7 +473,7 @@ export default function TabsHomePage() {
             <p className="text-sm font-semibold text-primary-900">
               {t("participants_count_label")}
             </p>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <input
                 type="number"
                 min="0"
@@ -503,7 +509,7 @@ export default function TabsHomePage() {
             <p className="text-sm font-semibold text-primary-900">
               {t("organizer_age")}
             </p>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <input
                 type="number"
                 min="0"
@@ -531,7 +537,7 @@ export default function TabsHomePage() {
             <p className="text-sm font-semibold text-primary-900">
               {t("Budget")}
             </p>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <input
                 type="number"
                 min="0"
@@ -556,22 +562,32 @@ export default function TabsHomePage() {
           </div>
 
           <div className="space-y-3 border-b border-[#EADAF1] pb-4">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className="space-y-1 text-sm font-semibold text-primary-900">
                 <span>{t("Start date")}</span>
                 <input
-                  type="date"
+                  type={dateInputType}
                   value={localFilters.start_date_between?.[0] ?? ""}
                   onChange={(event) => updateDateRange(0, event.target.value)}
+                  inputMode={
+                    dateInputType === "text" ? "numeric" : undefined
+                  }
+                  placeholder={dateFallbackMeta.placeholder}
+                  pattern={dateFallbackMeta.pattern}
                   className="w-full rounded-2xl border border-[#EADAF1] px-3 py-2 text-sm text-secondary-600"
                 />
               </label>
               <label className="space-y-1 text-sm font-semibold text-primary-900">
                 <span>{t("End date")}</span>
                 <input
-                  type="date"
+                  type={dateInputType}
                   value={localFilters.start_date_between?.[1] ?? ""}
                   onChange={(event) => updateDateRange(1, event.target.value)}
+                  inputMode={
+                    dateInputType === "text" ? "numeric" : undefined
+                  }
+                  placeholder={dateFallbackMeta.placeholder}
+                  pattern={dateFallbackMeta.pattern}
                   className="w-full rounded-2xl border border-[#EADAF1] px-3 py-2 text-sm text-secondary-600"
                 />
               </label>

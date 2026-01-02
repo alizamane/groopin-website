@@ -1,11 +1,20 @@
 .groopin-app {
   min-height: 100vh;
+  min-height: 100dvh;
   background-color: #ffffff;
   color: #000000;
 }
 
+@media (prefers-color-scheme: dark) {
+  .groopin-app {
+    background-color: #121212;
+    color: #F5F5F5;
+  }
+}
+
 .app-shell {
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 .hide-scrollbar {
