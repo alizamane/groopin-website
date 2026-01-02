@@ -5,7 +5,9 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 
 import Button from "../../../../../components/ui/button";
-import { ArrowLeftIcon, PaperAirplaneIcon } from "../../../../../components/ui/heroicons";
+import Modal from "../../../../../components/ui/modal";
+import UserAvatar from "../../../../../components/user/user-avatar";
+import { ArrowLeftIcon, CheckIcon, PaperAirplaneIcon } from "../../../../../components/ui/heroicons";
 import { useI18n } from "../../../../../components/i18n-provider";
 import { apiRequest } from "../../../../lib/api-client";
 import { getEcho } from "../../../../lib/realtime-client";
@@ -44,7 +46,12 @@ export default function ConversationPage() {
   const [conversation, setConversation] = useState(null);
   const [readStates, setReadStates] = useState([]);
   const [typingUsers, setTypingUsers] = useState([]);
+  const [isSeenModalOpen, setSeenModalOpen] = useState(false);
   const currentUser = getUser();
+  const currentUserId =
+    currentUser?.id !== null && currentUser?.id !== undefined
+      ? Number(currentUser.id)
+      : null;
   const bottomRef = useRef(null);
   const firstScrollRef = useRef(true);
   const messagesRef = useRef([]);
@@ -194,11 +201,11 @@ export default function ConversationPage() {
   }, [params.id]);
 
   useEffect(() => {
-    if (!currentUser?.id) return undefined;
+    if (!currentUserId) return undefined;
     const echo = getEcho();
     if (!echo) return undefined;
 
-    const channelName = `App.Models.User.${currentUser.id}`;
+    const channelName = `App.Models.User.${currentUserId}`;
     const channel = echo.private(channelName);
 
     channel.listen(".message:created", (event) => {
@@ -217,11 +224,16 @@ export default function ConversationPage() {
       const reader = event?.user || {};
       if (!reader?.id) return;
       setReadStates((prev) => {
-        const next = prev.filter((item) => item.id !== reader.id);
+        const next = prev.filter(
+          (item) => Number(item.id) !== Number(reader.id)
+        );
         next.push({
           id: reader.id,
           first_name: reader.first_name,
           last_name: reader.last_name,
+          name: reader.name,
+          avatar_image_url: reader.avatar_image_url,
+          uses_default_image: reader.uses_default_image,
           last_read_message_id: event?.message_id ?? null,
           last_read_at: event?.read_at ?? null
         });
@@ -232,7 +244,7 @@ export default function ConversationPage() {
     channel.listen(".message:typing", (event) => {
       if (Number(event?.conversation_id) !== Number(params.id)) return;
       const typingUser = event?.user;
-      if (!typingUser?.id || typingUser.id === currentUser?.id) return;
+      if (!typingUser?.id || Number(typingUser.id) === currentUserId) return;
       const isTyping = Boolean(event?.is_typing);
 
       setTypingUsers((prev) => {
@@ -260,12 +272,12 @@ export default function ConversationPage() {
     return () => {
       echo.leave(`private-${channelName}`);
     };
-  }, [currentUser?.id, params.id]);
+  }, [currentUserId, params.id]);
 
   const offer = conversation?.offer;
   const offerOwnerId = offer?.owner?.id || offer?.owner_id;
   const offerHref = offer
-    ? offerOwnerId === currentUser?.id
+    ? Number(offerOwnerId) === currentUserId
       ? `/app/auth/my-offers/${offer.id}`
       : `/app/auth/offers/${offer.id}`
     : "";
@@ -280,7 +292,7 @@ export default function ConversationPage() {
     for (let index = sortedMessages.length - 1; index >= 0; index -= 1) {
       const message = sortedMessages[index];
       if (!message || message.isTemp || message.automatic) continue;
-      if (message?.user?.id === currentUser?.id) {
+      if (Number(message?.user?.id) === currentUserId) {
         return message.id;
       }
     }
@@ -292,14 +304,48 @@ export default function ConversationPage() {
     const lastId = Number(lastOutgoingMessageId);
     if (!Number.isFinite(lastId)) return false;
     const otherReaders = readStates.filter(
-      (user) => user.id !== currentUser?.id
+      (user) => Number(user.id) !== currentUserId
     );
     if (!otherReaders.length) return false;
     return otherReaders.every((user) => {
       const readId = Number(user.last_read_message_id || 0);
       return readId >= lastId;
     });
-  }, [lastOutgoingMessageId, readStates, currentUser?.id]);
+  }, [lastOutgoingMessageId, readStates, currentUserId]);
+
+  const seenByUsers = useMemo(() => {
+    if (!lastOutgoingMessageId) return [];
+    const lastId = Number(lastOutgoingMessageId);
+    if (!Number.isFinite(lastId)) return [];
+    return readStates
+      .filter((user) => Number(user.id) !== currentUserId)
+      .filter((user) => Number(user.last_read_message_id || 0) >= lastId)
+      .sort((a, b) => {
+        const aTime = a.last_read_at ? new Date(a.last_read_at).getTime() : 0;
+        const bTime = b.last_read_at ? new Date(b.last_read_at).getTime() : 0;
+        return bTime - aTime;
+      });
+  }, [lastOutgoingMessageId, readStates, currentUserId]);
+
+  const seenSummary = useMemo(() => {
+    if (!seenByUsers.length) return "";
+    const names = seenByUsers.map((user) => {
+      return user.first_name || user.name || "";
+    }).filter(Boolean);
+    if (names.length <= 2) return names.join(", ");
+    return `${names.slice(0, 2).join(", ")} +${names.length - 2}`;
+  }, [seenByUsers]);
+
+  const allSeen = useMemo(() => {
+    if (!lastOutgoingMessageId) return false;
+    const otherReaders = readStates.filter(
+      (user) => Number(user.id) !== currentUserId
+    );
+    if (!otherReaders.length) return false;
+    return seenByUsers.length === otherReaders.length;
+  }, [lastOutgoingMessageId, readStates, currentUserId, seenByUsers.length]);
+
+  const seenToneClass = allSeen ? "text-secondary-600" : "text-secondary-300";
 
   useEffect(() => {
     if (!bottomRef.current) return;
@@ -357,7 +403,7 @@ export default function ConversationPage() {
   }, [params.id, currentUser?.id]);
 
   const markRead = async (messageId) => {
-    if (!currentUser?.id) return;
+    if (!currentUserId) return;
     const numericId = Number(messageId);
     if (!Number.isFinite(numericId) || numericId <= 0) return;
     if (numericId <= lastReadSentRef.current) return;
@@ -370,11 +416,16 @@ export default function ConversationPage() {
       const readData = payload?.data;
       if (readData?.message_id) {
         setReadStates((prev) => {
-          const next = prev.filter((user) => user.id !== currentUser?.id);
+          const next = prev.filter(
+            (user) => Number(user.id) !== currentUserId
+          );
           next.push({
-            id: currentUser?.id,
+            id: currentUserId,
             first_name: currentUser?.first_name,
             last_name: currentUser?.last_name,
+            name: currentUser?.name,
+            avatar_image_url: currentUser?.avatar_image_url,
+            uses_default_image: currentUser?.uses_default_image,
             last_read_message_id: readData.message_id,
             last_read_at: readData.read_at
           });
@@ -391,7 +442,7 @@ export default function ConversationPage() {
     if (!lastMessage || lastMessage.isTemp) return;
     if (!lastMessage.id) return;
     markRead(lastMessage.id);
-  }, [sortedMessages, params.id]);
+  }, [sortedMessages, params.id, currentUserId]);
 
   const handleSend = async (event) => {
     event.preventDefault();
@@ -407,7 +458,7 @@ export default function ConversationPage() {
       automatic: false,
       isTemp: true,
       user: {
-        id: currentUser?.id || tempId,
+        id: currentUserId || tempId,
         first_name: currentUser?.first_name || "You"
       }
     };
@@ -551,11 +602,33 @@ export default function ConversationPage() {
                           </p>
                           {isMine &&
                           !isTemp &&
-                          message.id === lastOutgoingMessageId &&
-                          lastOutgoingSeen ? (
-                            <p className="mt-1 text-[11px] text-secondary-500">
-                              {t("Seen")}
-                            </p>
+                          message.id === lastOutgoingMessageId ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (seenByUsers.length) {
+                                  setSeenModalOpen(true);
+                                }
+                              }}
+                              className={`mt-2 flex items-center gap-2 text-[11px] ${seenToneClass} ${
+                                seenByUsers.length ? "cursor-pointer" : ""
+                              }`}
+                              disabled={!seenByUsers.length}
+                            >
+                              <span className="relative inline-flex h-3 w-5 items-center justify-center">
+                                <CheckIcon
+                                  size={14}
+                                  strokeWidth={2.4}
+                                  className={seenToneClass}
+                                />
+                                <CheckIcon
+                                  size={14}
+                                  strokeWidth={2.4}
+                                  className={`${seenToneClass} absolute left-[6px]`}
+                                />
+                              </span>
+                              {seenSummary ? <span>{seenSummary}</span> : null}
+                            </button>
                           ) : null}
                         </div>
                       </div>
@@ -607,6 +680,39 @@ export default function ConversationPage() {
       {sendError ? (
         <p className="text-xs text-danger-600">{sendError}</p>
       ) : null}
+      <Modal
+        open={isSeenModalOpen}
+        title={t("Seen by")}
+        onClose={() => setSeenModalOpen(false)}
+      >
+        {seenByUsers.length ? (
+          <div className="space-y-4">
+            {seenByUsers.map((user) => (
+              <div
+                key={`seen-by-${user.id}`}
+                className="flex items-center gap-3"
+              >
+                <UserAvatar user={user} size={42} withBorder />
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-primary-900">
+                    {user.name ||
+                      `${user.first_name || ""} ${user.last_name || ""}`}
+                  </p>
+                  {user.last_read_at ? (
+                    <p className="text-xs text-secondary-400">
+                      {formatTime(user.last_read_at, dateLocale)}
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-secondary-400">
+            {t("No one has read this message yet.")}
+          </p>
+        )}
+      </Modal>
     </div>
   );
 }
