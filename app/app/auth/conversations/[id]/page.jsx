@@ -878,7 +878,7 @@ export default function ConversationPage() {
                                 : "bg-[#F4F4F5] text-secondary-700 rounded-bl-sm"
                             } ${isTemp ? "opacity-70" : ""} ${
                               isHighlighted ? "ring-2 ring-secondary-300" : ""
-                            }`}
+                            } relative`}
                             onMouseDown={
                               allowActions
                                 ? () => startLongPress(message)
@@ -895,13 +895,16 @@ export default function ConversationPage() {
                             onTouchCancel={allowActions ? cancelLongPress : undefined}
                             onContextMenu={
                               allowActions
-                                ? (event) => {
-                                    event.preventDefault();
-                                    openMessageActions(message);
-                                  }
-                                : undefined
+                              ? (event) => {
+                                  event.preventDefault();
+                                  openMessageActions(message);
+                                }
+                              : undefined
                             }
                           >
+                            {!isMine ? (
+                              <span className="pointer-events-none absolute left-0 top-4 h-3 w-3 -translate-x-1.5 rotate-45 bg-[#F4F4F5]" />
+                            ) : null}
                             {message.reply_to ? (
                               <div
                                 className={`rounded-xl border-l-2 px-3 py-2 text-xs ${
