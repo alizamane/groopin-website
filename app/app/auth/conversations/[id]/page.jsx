@@ -814,93 +814,106 @@ export default function ConversationPage() {
                           </div>
                         ) : null}
                       <div
-                        className={`flex ${
+                        className={`flex items-end gap-2 ${
                           isMine ? "justify-end" : "justify-start"
                         }`}
                       >
+                        {!isMine ? (
+                          <UserAvatar
+                            user={message.user}
+                            size={36}
+                            withBorder
+                          />
+                        ) : null}
                         <div
-                          className={`max-w-[75%] rounded-2xl px-4 py-3 text-sm shadow-sm ${
-                            isMine
-                              ? "bg-[#EADAF1] text-primary-900"
-                              : "bg-[#F4F4F5] text-secondary-700"
-                          } ${isTemp ? "opacity-70" : ""}`}
-                          onMouseDown={
-                            allowActions
-                              ? () => startLongPress(message)
-                              : undefined
-                          }
-                          onMouseUp={allowActions ? cancelLongPress : undefined}
-                          onMouseLeave={allowActions ? cancelLongPress : undefined}
-                          onTouchStart={
-                            allowActions
-                              ? () => startLongPress(message)
-                              : undefined
-                          }
-                          onTouchEnd={allowActions ? cancelLongPress : undefined}
-                          onTouchCancel={allowActions ? cancelLongPress : undefined}
-                          onContextMenu={
-                            allowActions
-                              ? (event) => {
-                                  event.preventDefault();
-                                  openMessageActions(message);
-                                }
-                              : undefined
-                          }
+                          className={`flex max-w-[75%] flex-col ${
+                            isMine ? "items-end" : "items-start"
+                          }`}
                         >
-                          {message.reply_to ? (
-                            <div
-                              className={`rounded-xl border-l-2 px-3 py-2 text-xs ${
-                                isMine
-                                  ? "border-secondary-500 bg-white/60 text-secondary-700"
-                                  : "border-secondary-400 bg-white/80 text-secondary-600"
-                              }`}
-                            >
-                              <p className="font-semibold">
-                                {getUserDisplayName(message.reply_to.user)}
-                              </p>
-                              <p className="mt-1 text-secondary-500">
-                                {getReplySnippet(message.reply_to.content)}
-                              </p>
-                            </div>
-                          ) : null}
                           {!isMine ? (
                             <p className="text-xs font-semibold text-primary-900">
-                              {message?.user?.first_name || ""}
+                              {getUserDisplayName(message.user)}
                             </p>
                           ) : null}
-                          <p className="mt-1 text-sm leading-relaxed">
-                            {message.content}
-                          </p>
-                          <p className="mt-2 text-[11px] text-secondary-400">
-                            {isTemp
-                              ? t("Loading more...")
-                              : formatTime(message.created_at, dateLocale)}
-                          </p>
-                          {isMine && !isTemp ? (
-                          <div className="mt-2 flex justify-end">
-                            <span
-                              className={`relative inline-flex h-3 w-5 items-center justify-center ${getSeenToneClass(message.id)}`}
-                            >
-                                <CheckIcon
-                                  size={14}
-                                  strokeWidth={2.4}
-                                  className={getSeenToneClass(message.id)}
-                                />
-                                <CheckIcon
-                                  size={14}
-                                  strokeWidth={2.4}
-                                  className={`${getSeenToneClass(message.id)} absolute left-[6px]`}
-                                />
-                              </span>
-                            </div>
-                          ) : null}
+                          <div
+                            className={`w-full rounded-2xl px-4 py-3 text-sm shadow-sm ${
+                              isMine
+                                ? "bg-[#EADAF1] text-primary-900 rounded-br-sm"
+                                : "bg-[#F4F4F5] text-secondary-700 rounded-bl-sm"
+                            } ${isTemp ? "opacity-70" : ""}`}
+                            onMouseDown={
+                              allowActions
+                                ? () => startLongPress(message)
+                                : undefined
+                            }
+                            onMouseUp={allowActions ? cancelLongPress : undefined}
+                            onMouseLeave={allowActions ? cancelLongPress : undefined}
+                            onTouchStart={
+                              allowActions
+                                ? () => startLongPress(message)
+                                : undefined
+                            }
+                            onTouchEnd={allowActions ? cancelLongPress : undefined}
+                            onTouchCancel={allowActions ? cancelLongPress : undefined}
+                            onContextMenu={
+                              allowActions
+                                ? (event) => {
+                                    event.preventDefault();
+                                    openMessageActions(message);
+                                  }
+                                : undefined
+                            }
+                          >
+                            {message.reply_to ? (
+                              <div
+                                className={`rounded-xl border-l-2 px-3 py-2 text-xs ${
+                                  isMine
+                                    ? "border-secondary-500 bg-white/60 text-secondary-700"
+                                    : "border-secondary-400 bg-white/80 text-secondary-600"
+                                }`}
+                              >
+                                <p className="font-semibold">
+                                  {getUserDisplayName(message.reply_to.user)}
+                                </p>
+                                <p className="mt-1 text-secondary-500">
+                                  {getReplySnippet(message.reply_to.content)}
+                                </p>
+                              </div>
+                            ) : null}
+                            <p className="mt-1 text-sm leading-relaxed">
+                              {message.content}
+                            </p>
+                            <p className="mt-2 text-[11px] text-secondary-400">
+                              {isTemp
+                                ? t("Loading more...")
+                                : formatTime(message.created_at, dateLocale)}
+                            </p>
+                            {isMine && !isTemp ? (
+                            <div className="mt-2 flex justify-end">
+                              <span
+                                className={`relative inline-flex h-3 w-5 items-center justify-center ${getSeenToneClass(message.id)}`}
+                              >
+                                  <CheckIcon
+                                    size={14}
+                                    strokeWidth={2.4}
+                                    className={getSeenToneClass(message.id)}
+                                  />
+                                  <CheckIcon
+                                    size={14}
+                                    strokeWidth={2.4}
+                                    className={`${getSeenToneClass(message.id)} absolute left-[6px]`}
+                                  />
+                                </span>
+                              </div>
+                            ) : null}
+                          </div>
                         </div>
                       </div>
                       {reactions.length ? (
                         <div
                           className={`flex flex-wrap gap-1 ${
                             isMine ? "justify-end" : "justify-start"
-                          }`}
+                          } ${isMine ? "" : "pl-10"}`}
                         >
                           {reactions.map((reaction) => {
                             const isMineReaction =
