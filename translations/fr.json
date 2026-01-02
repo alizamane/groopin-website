@@ -427,7 +427,7 @@
   "offers": {
     "address": "Lieu de l'activité",
     "address_placeholder": "Entrez l'adresse",
-    "city": "Ville de l'activité",
+    "city": "Ville",
     "city_placeholder": "Sélectionnez la ville",
     "create": "Publier",
     "create_error": "Erreur lors de la création de l'offre",
