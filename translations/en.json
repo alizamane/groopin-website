@@ -425,9 +425,9 @@
   "number_of_created_offers": "Nb of created offers: {{count}}",
   "number_of_created_offers_profile": "Activities done: ",
   "offers": {
-    "address": "Address",
+    "address": "Activity location",
     "address_placeholder": "Enter address",
-    "city": "City",
+    "city": "Activity city",
     "city_placeholder": "Select city",
     "create": "Publish",
     "create_error": "Error creating offer",
