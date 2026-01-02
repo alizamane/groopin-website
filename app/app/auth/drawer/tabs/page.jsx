@@ -156,6 +156,9 @@ export default function TabsHomePage() {
   const [offers, setOffers] = useState([]);
   const [status, setStatus] = useState("loading");
   const [error, setError] = useState("");
+  const [nextCursor, setNextCursor] = useState(null);
+  const [hasNextPage, setHasNextPage] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [categories, setCategories] = useState([]);
   const [cities, setCities] = useState([]);
   const [interests, setInterests] = useState([]);
@@ -163,6 +166,7 @@ export default function TabsHomePage() {
   const [isFilterOpen, setFilterOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   const user = getUser();
+  const sentinelRef = useRef(null);
   const latestOfferRequestRef = useRef(0);
   const dateInputType = useSupportedInputType("date");
   const dateFallbackMeta =
@@ -287,16 +291,33 @@ export default function TabsHomePage() {
     return () => clearTimeout(timeout);
   }, [searchValue]);
 
+  const buildOffersEndpoint = (cursor = null) => {
+    const query = buildFilterParams(filters, derivedCountryCityIds);
+    const params = new URLSearchParams(query);
+    if (cursor) {
+      params.set("cursor", cursor);
+    }
+    params.set("lite", "1");
+    const qs = params.toString();
+    return qs ? `offers?${qs}` : "offers?lite=1";
+  };
+
   useEffect(() => {
     setStatus("loading");
-    const query = buildFilterParams(filters, derivedCountryCityIds);
-    const liteParam = query ? "&lite=1" : "?lite=1";
-    const endpoint = query ? `offers?${query}${liteParam}` : "offers?lite=1";
+    setError("");
+    setIsLoadingMore(false);
+    setNextCursor(null);
+    setHasNextPage(false);
+    const endpoint = buildOffersEndpoint();
     const requestId = (latestOfferRequestRef.current += 1);
     apiRequest(endpoint, { cacheTime: 15000 })
       .then((payload) => {
         if (requestId !== latestOfferRequestRef.current) return;
-        setOffers(payload?.data || []);
+        const items = payload?.data || [];
+        const cursor = payload?.meta?.next_cursor || null;
+        setOffers(items);
+        setNextCursor(cursor);
+        setHasNextPage(Boolean(cursor));
         setStatus("ready");
         setError("");
       })
@@ -306,6 +327,45 @@ export default function TabsHomePage() {
         setStatus("error");
       });
   }, [filters, derivedCountryCityIds, t]);
+
+  const loadMore = React.useCallback(async () => {
+    if (!hasNextPage || isLoadingMore || !nextCursor) return;
+    if (status !== "ready") return;
+    const requestId = latestOfferRequestRef.current;
+    setIsLoadingMore(true);
+    try {
+      const payload = await apiRequest(buildOffersEndpoint(nextCursor), {
+        cache: false
+      });
+      if (requestId !== latestOfferRequestRef.current) return;
+      const items = payload?.data || [];
+      const cursor = payload?.meta?.next_cursor || null;
+      setOffers((prev) => [...prev, ...items]);
+      setNextCursor(cursor);
+      setHasNextPage(Boolean(cursor));
+    } catch (err) {
+      if (requestId !== latestOfferRequestRef.current) return;
+      setError(err?.message || t("general.error_has_occurred"));
+    } finally {
+      if (requestId === latestOfferRequestRef.current) {
+        setIsLoadingMore(false);
+      }
+    }
+  }, [hasNextPage, isLoadingMore, nextCursor, status, t, filters, derivedCountryCityIds]);
+
+  useEffect(() => {
+    if (!sentinelRef.current || !hasNextPage) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          loadMore();
+        }
+      },
+      { rootMargin: "200px" }
+    );
+    observer.observe(sentinelRef.current);
+    return () => observer.disconnect();
+  }, [hasNextPage, loadMore]);
 
   const hasFilters = useMemo(() => {
     return Object.entries(filters)
@@ -504,6 +564,15 @@ export default function TabsHomePage() {
           {offers.map((offer) => (
             <OfferCard key={offer.id} offer={offer} currentUserId={user?.id} />
           ))}
+        </div>
+      ) : null}
+
+      {status === "ready" && hasNextPage ? (
+        <div
+          ref={sentinelRef}
+          className="flex items-center justify-center py-6 text-xs text-secondary-400"
+        >
+          {isLoadingMore ? t("Loading more...") : ""}
         </div>
       ) : null}
 
