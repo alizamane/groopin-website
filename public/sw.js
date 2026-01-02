@@ -1,4 +1,4 @@
-const DEFAULT_NOTIFICATION_PATH = "/app/auth/drawer/notifications";
+const DEFAULT_NOTIFICATION_PATH = "/app/auth/drawer/tabs/requests";
 
 const isValidAppPath = (path) => typeof path === "string" && path.startsWith("/app/");
 
@@ -32,10 +32,10 @@ const resolveActionUrl = (data) => {
     case "participation.request.canceled":
     case "participation.request.removed":
     case "participation.request.exits":
-      return offerId ? `/app/auth/my-offers/${offerId}/participants` : "";
+      return "/app/auth/drawer/tabs/requests";
     case "participation.request.accepted":
     case "participation.request.rejected":
-      return offerId ? `/app/auth/offers/${offerId}` : "";
+      return "/app/auth/drawer/tabs/requests";
     case "participation.offerremoved":
       return "/app/auth/participating";
     case "participation.leavereview":
