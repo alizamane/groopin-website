@@ -138,6 +138,7 @@ export default function TabsHomePage() {
   const [maritalStatus, setMaritalStatus] = useState([]);
   const [isFilterOpen, setFilterOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
+  const [countryFilter, setCountryFilter] = useState("");
   const user = getUser();
   const latestOfferRequestRef = useRef(0);
   const dateInputType = useSupportedInputType("date");
@@ -167,6 +168,23 @@ export default function TabsHomePage() {
     ],
     [t]
   );
+  const countryOptions = useMemo(() => {
+    const available = new Set(
+      cities.map((city) => (city.country_code || "MA").toUpperCase())
+    );
+    const options = [
+      { code: "MA", label: t("countries.ma") },
+      { code: "FR", label: t("countries.fr") }
+    ];
+    return options.filter((option) => available.has(option.code));
+  }, [cities, t]);
+  const filteredCities = useMemo(() => {
+    if (!countryFilter) return [];
+    return cities.filter(
+      (city) =>
+        (city.country_code || "MA").toUpperCase() === countryFilter
+    );
+  }, [cities, countryFilter]);
 
   useEffect(() => {
     apiRequest("parameters", { cacheTime: 300000 })
@@ -194,6 +212,19 @@ export default function TabsHomePage() {
   useEffect(() => {
     setLocalFilters(filters);
   }, [filters]);
+
+  useEffect(() => {
+    if (!cities.length || !localFilters.city?.length) return;
+    const selectedCityId = localFilters.city[0];
+    const match = cities.find(
+      (city) => String(city.id) === String(selectedCityId)
+    );
+    if (!match) return;
+    const nextCode = (match.country_code || "MA").toUpperCase();
+    if (nextCode !== countryFilter) {
+      setCountryFilter(nextCode);
+    }
+  }, [cities, localFilters.city, countryFilter]);
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -302,6 +333,7 @@ export default function TabsHomePage() {
       interests: null,
       marital_status: null
     };
+    setCountryFilter("");
     setLocalFilters(reset);
     setFilters(reset);
   };
@@ -447,6 +479,31 @@ export default function TabsHomePage() {
 
           <div className="space-y-3 border-b border-[#EADAF1] pb-4">
             <p className="text-sm font-semibold text-primary-900">
+              {t("offers.country")}
+            </p>
+            <select
+              value={countryFilter}
+              onChange={(event) => {
+                const nextCountry = event.target.value;
+                setCountryFilter(nextCountry);
+                setLocalFilters((prev) => ({
+                  ...prev,
+                  city: null
+                }));
+              }}
+              className="min-h-[40px] w-full rounded-2xl border border-[#EADAF1] px-3 py-2 text-sm text-secondary-600"
+            >
+              <option value="">{t("offers.country_placeholder")}</option>
+              {countryOptions.map((country) => (
+                <option key={country.code} value={country.code}>
+                  {country.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-3 border-b border-[#EADAF1] pb-4">
+            <p className="text-sm font-semibold text-primary-900">
               {t("City")}
             </p>
             <select
@@ -458,10 +515,15 @@ export default function TabsHomePage() {
                   city: value ? [Number(value)] : null
                 }));
               }}
+              disabled={!countryFilter}
               className="min-h-[40px] w-full rounded-2xl border border-[#EADAF1] px-3 py-2 text-sm text-secondary-600"
             >
-              <option value="">{t("All")}</option>
-              {cities.map((city) => (
+              <option value="">
+                {countryFilter
+                  ? t("All")
+                  : t("offers.city_placeholder_select_country")}
+              </option>
+              {filteredCities.map((city) => (
                 <option key={city.id} value={city.id}>
                   {city.name}
                 </option>
