@@ -926,9 +926,6 @@ export default function ConversationPage() {
                               : undefined
                             }
                           >
-                            {!isMine ? (
-                              <span className="pointer-events-none absolute -left-4 top-1 h-0 w-0 border-y-[10px] border-r-[14px] border-y-transparent border-r-[#F4F4F5]" />
-                            ) : null}
                             {message.reply_to ? (
                               <div
                                 className={`rounded-xl border-l-2 px-3 py-2 text-xs ${
