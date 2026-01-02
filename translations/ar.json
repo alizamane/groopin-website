@@ -417,7 +417,10 @@
     "address": "العنوان",
     "address_placeholder": "أدخل العنوان",
     "city": "المدينة",
+    "country": "الدولة",
+    "country_placeholder": "اختر الدولة",
     "city_placeholder": "اختر المدينة",
+    "city_placeholder_select_country": "اختر الدولة اولا",
     "create": "نشر",
     "create_error": "حدث خطأ أثناء إنشاء العرض",
     "create_offer": "إنشاء عرض",
@@ -593,5 +596,9 @@
   "yesterday": "أمس",
   "Overview": "نظرة عامة",
   "Recent scans": "عمليات المسح الأخيرة",
-  "No scans yet": "لا توجد عمليات مسح بعد"
+  "No scans yet": "لا توجد عمليات مسح بعد",
+  "countries": {
+    "ma": "??????",
+    "fr": "?????"
+  }
 }

@@ -335,6 +335,10 @@
     "title": "Welcome to a community built on respect, trust, and shared moments."
   },
   "confirm blocking user": "Are you sure you want to block ",
+  "countries": {
+    "ma": "Morocco",
+    "fr": "France"
+  },
   "creat_groop_preferences": "Your Groop preferences",
   "date_of_birth": "Date of birth",
   "delete account": "Delete account",
@@ -428,7 +432,10 @@
     "address": "Activity location",
     "address_placeholder": "Enter address",
     "city": "Activity city",
+    "country": "Country",
+    "country_placeholder": "Select country",
     "city_placeholder": "Select city",
+    "city_placeholder_select_country": "Select country first",
     "create": "Publish",
     "create_error": "Error creating offer",
     "create_offer": "Create Offer",

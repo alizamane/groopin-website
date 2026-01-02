@@ -335,6 +335,10 @@
     "title": "Bienvenue dans une communauté de respect, de confiance et de moments partagés."
   },
   "confirm blocking user": "Êtes-vous sûr de vouloir bloquer",
+  "countries": {
+    "ma": "Maroc",
+    "fr": "France"
+  },
   "creat_groop_preferences": "Vos préférences pour le Groop",
   "date_of_birth": "Date de naissance",
   "delete account": "Supprimer le compte",
@@ -428,7 +432,10 @@
     "address": "Lieu de l'activité",
     "address_placeholder": "Entrez l'adresse",
     "city": "Ville",
+    "country": "Pays",
+    "country_placeholder": "Selectionnez un pays",
     "city_placeholder": "Sélectionnez la ville",
+    "city_placeholder_select_country": "Selectionnez d'abord un pays",
     "create": "Publier",
     "create_error": "Erreur lors de la création de l'offre",
     "create_offer": "Créez votre offre",

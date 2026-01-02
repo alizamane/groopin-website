@@ -134,6 +134,7 @@ export default function EditMyOfferPage() {
   const { t } = useI18n();
   const [categories, setCategories] = useState([]);
   const [cities, setCities] = useState([]);
+  const [countryCode, setCountryCode] = useState("");
   const [dynamicQuestions, setDynamicQuestions] = useState([]);
   const [status, setStatus] = useState("loading");
   const [message, setMessage] = useState("");
@@ -235,13 +236,49 @@ export default function EditMyOfferPage() {
   }, [categories, formValues.category_id]);
 
   const subCategories = selectedCategory?.children || [];
-    const isDraft = Boolean(offer?.is_draft) || offer?.status === "draft";
-    const isTicketingLocked = (offer?.participants_count || 0) > 1;
-    const isActionDisabled =
-      isSaving ||
-      isPublishing ||
-      status !== "ready" ||
-      isTicketingLocked;
+  const countryOptions = useMemo(() => {
+    const available = new Set(
+      cities.map((city) => (city.country_code || "MA").toUpperCase())
+    );
+    const options = [
+      { code: "MA", label: t("countries.ma") },
+      { code: "FR", label: t("countries.fr") }
+    ];
+    return options.filter((option) => available.has(option.code));
+  }, [cities, t]);
+  const filteredCities = useMemo(() => {
+    if (!countryCode) return [];
+    return cities.filter(
+      (city) =>
+        (city.country_code || "MA").toUpperCase() === countryCode
+    );
+  }, [cities, countryCode]);
+  const isDraft = Boolean(offer?.is_draft) || offer?.status === "draft";
+  const isTicketingLocked = (offer?.participants_count || 0) > 1;
+  const isActionDisabled =
+    isSaving ||
+    isPublishing ||
+    status !== "ready" ||
+    isTicketingLocked;
+
+  useEffect(() => {
+    if (!cities.length || !formValues.city_id) return;
+    const match = cities.find(
+      (city) => String(city.id) === String(formValues.city_id)
+    );
+    if (!match) return;
+    const nextCode = (match.country_code || "MA").toUpperCase();
+    if (nextCode !== countryCode) {
+      setCountryCode(nextCode);
+    }
+  }, [cities, formValues.city_id, countryCode]);
+
+  useEffect(() => {
+    if (!cities.length || countryCode) return;
+    const defaultCode =
+      (cities[0]?.country_code || "MA").toUpperCase();
+    setCountryCode(defaultCode);
+  }, [cities, countryCode]);
 
   const updateField = (field, value) => {
     setFormValues((prev) => ({ ...prev, [field]: value }));
@@ -511,11 +548,15 @@ export default function EditMyOfferPage() {
 
       <div className="space-y-1">
         <label className="mb-1 block text-lg text-primary-500">
-          {renderRequiredLabel(t("offers.city"))}
+          {renderRequiredLabel(t("offers.country"))}
         </label>
         <select
-          value={formValues.city_id}
-          onChange={(event) => updateField("city_id", event.target.value)}
+          value={countryCode}
+          onChange={(event) => {
+            const nextCountry = event.target.value;
+            setCountryCode(nextCountry);
+            updateField("city_id", "");
+          }}
           className={`w-full min-h-[52px] rounded-full border-2 px-4 py-3 text-base leading-6 text-secondary-400 outline-none focus:border-primary-500 ${
             normalizeFieldError(fieldErrors, "city_id")
               ? "border-danger-600"
@@ -523,8 +564,36 @@ export default function EditMyOfferPage() {
           }`}
           required
         >
-          <option value="">{t("offers.city_placeholder")}</option>
-          {cities.map((city) => (
+          <option value="">{t("offers.country_placeholder")}</option>
+          {countryOptions.map((country) => (
+            <option key={country.code} value={country.code}>
+              {country.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="space-y-1">
+        <label className="mb-1 block text-lg text-primary-500">
+          {renderRequiredLabel(t("offers.city"))}
+        </label>
+        <select
+          value={formValues.city_id}
+          onChange={(event) => updateField("city_id", event.target.value)}
+          disabled={!countryCode}
+          className={`w-full min-h-[52px] rounded-full border-2 px-4 py-3 text-base leading-6 text-secondary-400 outline-none focus:border-primary-500 ${
+            normalizeFieldError(fieldErrors, "city_id")
+              ? "border-danger-600"
+              : "border-[#EADAF1]"
+          }`}
+          required
+        >
+          <option value="">
+            {countryCode
+              ? t("offers.city_placeholder")
+              : t("offers.city_placeholder_select_country")}
+          </option>
+          {filteredCities.map((city) => (
             <option key={city.id} value={city.id}>
               {city.name}
             </option>
