@@ -3,6 +3,11 @@
 import React from "react";
 import Image from "next/image";
 
+const getSafeAvatarUrl = (avatarUrl) =>
+  avatarUrl?.includes("ui-avatars.com/api")
+    ? `${avatarUrl}${avatarUrl.includes("?") ? "&" : "?"}format=png`
+    : avatarUrl;
+
 export default function UsersAvatarsList({ users = [], lastItemText }) {
   const visible = users.slice(0, 3);
   return (
@@ -25,21 +30,22 @@ export default function UsersAvatarsList({ users = [], lastItemText }) {
               user?.profile_image_url ||
               user?.profile_image;
             if (avatarUrl) {
+              const safeAvatarUrl = getSafeAvatarUrl(avatarUrl);
               return (
-            <Image
-              src={avatarUrl}
-              alt={user?.name || user?.first_name || "User avatar"}
-              width={28}
-              height={28}
-              className="h-full w-full object-cover"
-            />
+                <Image
+                  src={safeAvatarUrl}
+                  alt={user?.name || user?.first_name || "User avatar"}
+                  width={28}
+                  height={28}
+                  className="h-full w-full object-cover"
+                />
               );
             }
             return (
-            <span>
-              {(user?.first_name?.[0] || "G") +
-                (user?.last_name?.[0] || "")}
-            </span>
+              <span>
+                {(user?.first_name?.[0] || "G") +
+                  (user?.last_name?.[0] || "")}
+              </span>
             );
           })()}
         </div>
