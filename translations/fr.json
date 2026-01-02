@@ -621,5 +621,33 @@
   "Zoom": "Zoom",
   "years_old": "{{count}}ans",
   "yes_cancel": "Oui, annuler",
-  "yesterday": "Hier"
+  "yesterday": "Hier",
+  "chat": {
+    "loading_older": "Chargement des anciens messages...",
+    "pin": "Epingler le message",
+    "pinned_message": "Message epingle",
+    "unpin": "Retirer l'epingle"
+  },
+  "poll": {
+    "add_option": "Ajouter une option",
+    "allow_change": "Autoriser la modification du vote",
+    "allow_multiple": "Autoriser plusieurs reponses",
+    "close": "Clore le sondage",
+    "closed": "Clos",
+    "create": "Creer un sondage",
+    "create_title": "Creer un sondage",
+    "creating": "Creation...",
+    "label": "Sondage",
+    "multi_choice": "Choix multiple",
+    "option_placeholder": "Option {{count}}",
+    "options": "Options",
+    "options_required": "Ajoutez au moins deux options.",
+    "question": "Question",
+    "question_placeholder": "Posez une question",
+    "question_required": "Veuillez saisir une question.",
+    "remove_option": "Supprimer l'option",
+    "single_choice": "Choix unique",
+    "submit": "Valider le vote",
+    "votes": "{{count}} votes"
+  }
 }

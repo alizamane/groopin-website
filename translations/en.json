@@ -621,5 +621,33 @@
   "Zoom": "Zoom",
   "years_old": "{{count}}y/o",
   "yes_cancel": "Yes, cancel",
-  "yesterday": "Yesterday"
+  "yesterday": "Yesterday",
+  "chat": {
+    "loading_older": "Loading older messages...",
+    "pin": "Pin message",
+    "pinned_message": "Pinned message",
+    "unpin": "Unpin message"
+  },
+  "poll": {
+    "add_option": "Add option",
+    "allow_change": "Allow vote changes",
+    "allow_multiple": "Allow multiple answers",
+    "close": "Close poll",
+    "closed": "Closed",
+    "create": "Create poll",
+    "create_title": "Create a poll",
+    "creating": "Creating...",
+    "label": "Poll",
+    "multi_choice": "Multiple choice",
+    "option_placeholder": "Option {{count}}",
+    "options": "Options",
+    "options_required": "Please add at least two options.",
+    "question": "Question",
+    "question_placeholder": "Ask a question",
+    "question_required": "Please enter a question.",
+    "remove_option": "Remove option",
+    "single_choice": "Single choice",
+    "submit": "Submit vote",
+    "votes": "{{count}} votes"
+  }
 }

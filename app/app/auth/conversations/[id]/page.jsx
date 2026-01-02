@@ -1,12 +1,18 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 
 import Modal from "../../../../../components/ui/modal";
 import UserAvatar from "../../../../../components/user/user-avatar";
-import { ArrowLeftIcon, CheckIcon, PaperAirplaneIcon } from "../../../../../components/ui/heroicons";
+import {
+  ArrowLeftIcon,
+  CheckIcon,
+  MapPinIcon,
+  PaperAirplaneIcon,
+  PlusIcon
+} from "../../../../../components/ui/heroicons";
 import { useI18n } from "../../../../../components/i18n-provider";
 import { apiRequest } from "../../../../lib/api-client";
 import { getEcho } from "../../../../lib/realtime-client";
@@ -21,6 +27,7 @@ const nameColorClasses = [
   "text-[#15803D]",
   "text-[#0E7490]"
 ];
+
 
 const formatDay = (value, locale) => {
   if (!value) return "";
@@ -99,6 +106,21 @@ export default function ConversationPage() {
   const [conversation, setConversation] = useState(null);
   const [readStates, setReadStates] = useState([]);
   const [typingUsers, setTypingUsers] = useState([]);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    lastPage: 1,
+    hasMore: false
+  });
+  const [isLoadingOlder, setIsLoadingOlder] = useState(false);
+  const [pinnedMessage, setPinnedMessage] = useState(null);
+  const [isPollModalOpen, setPollModalOpen] = useState(false);
+  const [pollQuestion, setPollQuestion] = useState("");
+  const [pollOptions, setPollOptions] = useState(["", ""]);
+  const [pollAllowMultiple, setPollAllowMultiple] = useState(false);
+  const [pollAllowChange, setPollAllowChange] = useState(true);
+  const [pollState, setPollState] = useState("idle");
+  const [pollError, setPollError] = useState("");
+  const [pendingPollSelections, setPendingPollSelections] = useState({});
   const [isActionModalOpen, setActionModalOpen] = useState(false);
   const [isInfoModalOpen, setInfoModalOpen] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState(null);
@@ -110,6 +132,7 @@ export default function ConversationPage() {
       ? Number(currentUser.id)
       : null;
   const bottomRef = useRef(null);
+  const messagesContainerRef = useRef(null);
   const inputRef = useRef(null);
   const messageRefs = useRef(new Map());
   const firstScrollRef = useRef(true);
@@ -122,6 +145,13 @@ export default function ConversationPage() {
   const typingSentAtRef = useRef(0);
   const typingStateRef = useRef(false);
   const typingCleanupRef = useRef(new Map());
+  const pendingScrollRestoreRef = useRef(null);
+  const stickToBottomRef = useRef(true);
+  const paginationRef = useRef({
+    currentPage: 1,
+    lastPage: 1,
+    hasMore: false
+  });
   const dateLocale =
     locale === "fr" ? "fr-FR" : locale === "ar" ? "ar-MA" : "en-US";
 
@@ -137,6 +167,10 @@ export default function ConversationPage() {
   useEffect(() => {
     messagesRef.current = messages;
   }, [messages]);
+
+  useEffect(() => {
+    paginationRef.current = pagination;
+  }, [pagination]);
 
   const normalizeUser = (user) => {
     if (!user) return null;
@@ -160,24 +194,96 @@ export default function ConversationPage() {
     };
   };
 
+  const normalizePoll = (poll) => {
+    if (!poll) return null;
+    return {
+      id: poll.id,
+      allow_multiple: Boolean(poll.allow_multiple),
+      allow_change: Boolean(poll.allow_change),
+      closed_at: poll.closed_at || null,
+      is_closed: Boolean(poll.is_closed || poll.closed_at),
+      options: Array.isArray(poll.options)
+        ? poll.options.map((option) => ({
+            id: option.id,
+            label: option.label,
+            votes_count: Number(option.votes_count || 0)
+          }))
+        : [],
+      my_votes: Array.isArray(poll.my_votes)
+        ? poll.my_votes.map((vote) => Number(vote))
+        : []
+    };
+  };
+
   const normalizeMessage = (message) => {
     if (!message) return null;
     return {
       id: message.id,
       content: message.content,
-      type: message.type,
+      type: message.type || "text",
       automatic: Boolean(message.automatic),
       created_at: message.created_at,
       user: normalizeUser(message.user),
       reply_to: normalizeReplyTo(message.reply_to),
       reactions: Array.isArray(message.reactions) ? message.reactions : [],
-      my_reaction: message.my_reaction || null
+      my_reaction: message.my_reaction || null,
+      poll: normalizePoll(message.poll)
     };
   };
 
   const normalizeMessages = (items) => {
     if (!items?.length) return [];
     return items.map(normalizeMessage).filter(Boolean);
+  };
+
+  const mergeMessagesById = (current, incoming) => {
+    const merged = new Map();
+    current.forEach((message) => {
+      if (message?.id !== undefined) {
+        merged.set(String(message.id), message);
+      }
+    });
+    incoming.forEach((message) => {
+      if (message?.id !== undefined) {
+        merged.set(String(message.id), message);
+      }
+    });
+    return Array.from(merged.values());
+  };
+
+  const getPaginationFromPayload = (payload) => {
+    const meta = payload?.meta?.pagination || {};
+    const currentPage = Number(meta.current_page || 1);
+    const lastPage = Number(meta.last_page || currentPage);
+    const hasMore =
+      typeof meta.has_more === "boolean"
+        ? meta.has_more
+        : currentPage < lastPage;
+    return {
+      currentPage,
+      lastPage,
+      hasMore
+    };
+  };
+
+  const applyPagination = (payload, nextPage = null) => {
+    const nextMeta = getPaginationFromPayload(payload);
+    setPagination((prev) => {
+      const currentPage =
+        typeof nextPage === "number" ? nextPage : prev?.currentPage || 1;
+      const lastPage =
+        Number(nextMeta.lastPage || prev?.lastPage || currentPage);
+      return {
+        currentPage,
+        lastPage,
+        hasMore: currentPage < lastPage
+      };
+    });
+  };
+
+  const normalizePinnedMessage = (payload) => {
+    const pinned = payload?.meta?.pinned_message;
+    return normalizeMessage(pinned);
   };
 
   const mergeIncomingMessage = (incoming) => {
@@ -192,21 +298,28 @@ export default function ConversationPage() {
 
   const fetchMessages = async () => {
     setStatus("loading");
+    setError("");
+    setIsLoadingOlder(false);
+    setPendingPollSelections({});
+    firstScrollRef.current = true;
+    pendingScrollRestoreRef.current = null;
     try {
       const payload = await apiRequest(
-        `conversations/${params.id}/messages?lite=1`,
+        `conversations/${params.id}/messages?lite=1&page=1`,
         { cache: false }
       );
       const remoteMessages = normalizeMessages(payload?.data || []);
       const conversationData = payload?.meta?.conversation || null;
       const remoteReadStates = payload?.meta?.read_states || [];
+      const pinned = normalizePinnedMessage(payload);
       lastRemoteSignatureRef.current = buildMessageSignature(remoteMessages);
       lastConversationStampRef.current =
         conversationData?.last_message_at || "";
       setMessages(remoteMessages);
       setConversation(conversationData);
       setReadStates(remoteReadStates);
-      setError("");
+      setPinnedMessage(pinned);
+      applyPagination(payload, 1);
       setStatus("ready");
     } catch (err) {
       setError(err?.message || t("general.error_has_occurred"));
@@ -217,7 +330,7 @@ export default function ConversationPage() {
   const refreshMessages = async () => {
     try {
       const payload = await apiRequest(
-        `conversations/${params.id}/messages?lite=1`,
+        `conversations/${params.id}/messages?lite=1&page=1`,
         { cache: false }
       );
       const remoteMessages = normalizeMessages(payload?.data || []);
@@ -225,9 +338,12 @@ export default function ConversationPage() {
       const remoteReadStates = payload?.meta?.read_states || [];
       const remoteSignature = buildMessageSignature(remoteMessages);
       const conversationStamp = conversationData?.last_message_at || "";
+      const pinned = normalizePinnedMessage(payload);
       const hasTempMessages = messagesRef.current.some(
         (message) => message?.isTemp
       );
+
+      applyPagination(payload, paginationRef.current?.currentPage || 1);
 
       if (
         !hasTempMessages &&
@@ -241,6 +357,7 @@ export default function ConversationPage() {
           lastConversationStampRef.current = conversationStamp;
         }
         setReadStates(remoteReadStates);
+        setPinnedMessage(pinned);
         setStatus((prev) => (prev === "error" ? "ready" : prev));
         return;
       }
@@ -248,26 +365,87 @@ export default function ConversationPage() {
       setConversation(conversationData);
       setMessages((prev) => {
         const tempMessages = prev.filter((message) => message?.isTemp);
-        if (!tempMessages.length) return remoteMessages;
-        const filteredTemps = tempMessages.filter((temp) => {
-          return !remoteMessages.some((remote) => {
-            if (remote?.automatic) return false;
-            if (remote?.user?.id !== temp?.user?.id) return false;
-            if (remote?.content !== temp?.content) return false;
-            const tempTime = new Date(temp.created_at).getTime();
-            const remoteTime = new Date(remote.created_at).getTime();
-            return Math.abs(remoteTime - tempTime) < 15000;
+        const nonTempMessages = prev.filter((message) => !message?.isTemp);
+        let mergedMessages = mergeMessagesById(
+          nonTempMessages,
+          remoteMessages
+        );
+
+        if (tempMessages.length) {
+          const filteredTemps = tempMessages.filter((temp) => {
+            return !remoteMessages.some((remote) => {
+              if (remote?.automatic) return false;
+              if (remote?.user?.id !== temp?.user?.id) return false;
+              if (remote?.content !== temp?.content) return false;
+              const tempTime = new Date(temp.created_at).getTime();
+              const remoteTime = new Date(remote.created_at).getTime();
+              return Math.abs(remoteTime - tempTime) < 15000;
+            });
           });
-        });
-        return [...remoteMessages, ...filteredTemps];
+          mergedMessages = mergeMessagesById(mergedMessages, filteredTemps);
+        }
+
+        return mergedMessages;
       });
       setReadStates(remoteReadStates);
+      setPinnedMessage(pinned);
       lastRemoteSignatureRef.current = remoteSignature;
       lastConversationStampRef.current = conversationStamp;
       setError("");
       setStatus((prev) => (prev === "error" ? "ready" : prev));
     } catch {
       // Silent refresh; keep current UI state.
+    }
+  };
+
+  const loadOlderMessages = async () => {
+    if (isLoadingOlder || !paginationRef.current?.hasMore) return;
+    const container = messagesContainerRef.current;
+    if (!container) return;
+    const nextPage = (paginationRef.current?.currentPage || 1) + 1;
+    pendingScrollRestoreRef.current = {
+      scrollHeight: container.scrollHeight,
+      scrollTop: container.scrollTop
+    };
+    setIsLoadingOlder(true);
+    let didAppend = false;
+    try {
+      const payload = await apiRequest(
+        `conversations/${params.id}/messages?lite=1&page=${nextPage}`,
+        { cache: false }
+      );
+      const olderMessages = normalizeMessages(payload?.data || []);
+      if (olderMessages.length) {
+        const existingIds = new Set(
+          messagesRef.current.map((message) => String(message?.id))
+        );
+        didAppend = olderMessages.some(
+          (message) => !existingIds.has(String(message?.id))
+        );
+      }
+      setMessages((prev) => mergeMessagesById(prev, olderMessages));
+      applyPagination(payload, nextPage);
+    } catch {
+      // Ignore load older errors; keep current UI.
+      pendingScrollRestoreRef.current = null;
+    } finally {
+      if (!didAppend) {
+        pendingScrollRestoreRef.current = null;
+      }
+      setIsLoadingOlder(false);
+    }
+  };
+
+  const handleScroll = () => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+    if (status !== "ready") return;
+    const nearBottom =
+      container.scrollHeight - container.scrollTop - container.clientHeight <
+      160;
+    stickToBottomRef.current = nearBottom;
+    if (container.scrollTop < 120) {
+      loadOlderMessages();
     }
   };
 
@@ -374,6 +552,10 @@ export default function ConversationPage() {
 
   const offer = conversation?.offer;
   const offerOwnerId = offer?.owner?.id || offer?.owner_id;
+  const isOfferOwner =
+    offerOwnerId !== null &&
+    offerOwnerId !== undefined &&
+    Number(offerOwnerId) === currentUserId;
   const offerHref = offer
     ? Number(offerOwnerId) === currentUserId
       ? `/app/auth/my-offers/${offer.id}`
@@ -432,6 +614,11 @@ export default function ConversationPage() {
     return Number(selectedMessage.user.id) === currentUserId;
   }, [selectedMessage, currentUserId]);
 
+  const selectedIsPinned = useMemo(() => {
+    if (!selectedMessage?.id || !pinnedMessage?.id) return false;
+    return Number(selectedMessage.id) === Number(pinnedMessage.id);
+  }, [selectedMessage, pinnedMessage]);
+
   const formatReadStamp = (value) => {
     return formatDateTime(value, dateLocale);
   };
@@ -451,6 +638,20 @@ export default function ConversationPage() {
     const trimmed = content.trim();
     if (trimmed.length <= 80) return trimmed;
     return `${trimmed.slice(0, 80)}...`;
+  };
+
+  const getPinnedPreview = (message) => {
+    if (!message) return "";
+    if (message.type === "poll") {
+      return message.content || t("poll.label");
+    }
+    return message.content || "";
+  };
+
+  const hasSameIds = (a = [], b = []) => {
+    if (a.length !== b.length) return false;
+    const setA = new Set(a);
+    return b.every((id) => setA.has(id));
   };
 
   const getNameColorClass = (userId) => {
@@ -489,11 +690,24 @@ export default function ConversationPage() {
     return () => clearTimeout(timeout);
   }, [highlightedMessageId]);
 
-  useEffect(() => {
-    if (!bottomRef.current) return;
-    const behavior = firstScrollRef.current ? "auto" : "smooth";
-    bottomRef.current.scrollIntoView({ behavior, block: "end" });
-    firstScrollRef.current = false;
+  useLayoutEffect(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+    if (pendingScrollRestoreRef.current) {
+      const { scrollHeight, scrollTop } = pendingScrollRestoreRef.current;
+      const nextScrollHeight = container.scrollHeight;
+      container.scrollTop = nextScrollHeight - scrollHeight + scrollTop;
+      pendingScrollRestoreRef.current = null;
+      return;
+    }
+    if (firstScrollRef.current) {
+      container.scrollTop = container.scrollHeight;
+      firstScrollRef.current = false;
+      return;
+    }
+    if (stickToBottomRef.current) {
+      container.scrollTop = container.scrollHeight;
+    }
   }, [sortedMessages.length]);
 
   const sendTyping = async (isTyping) => {
@@ -692,6 +906,219 @@ export default function ConversationPage() {
     }
   };
 
+  const updateMessagePoll = (messageId, poll) => {
+    if (!messageId || !poll) return;
+    const normalizedPoll = normalizePoll(poll);
+    if (!normalizedPoll) return;
+    setPendingPollSelections((prev) => {
+      const next = { ...prev };
+      delete next[messageId];
+      return next;
+    });
+    setMessages((prev) =>
+      prev.map((message) => {
+        if (Number(message.id) !== Number(messageId)) return message;
+        return { ...message, poll: normalizedPoll };
+      })
+    );
+    setPinnedMessage((prev) => {
+      if (!prev || Number(prev.id) !== Number(messageId)) return prev;
+      return { ...prev, poll: normalizedPoll };
+    });
+  };
+
+  const handlePollVote = async (message, optionId) => {
+    const normalizedOptionId = Number(optionId);
+    if (!message?.poll || !normalizedOptionId) return;
+    if (message.poll.is_closed) return;
+    const canEditSelection =
+      message.poll.allow_change || (message.poll.my_votes || []).length === 0;
+    if (!canEditSelection) return;
+
+    if (message.poll.allow_multiple) {
+      setPendingPollSelections((prev) => {
+        const current =
+          prev[message.id] ?? message.poll.my_votes ?? [];
+        const nextVotes = new Set(current);
+        if (nextVotes.has(normalizedOptionId)) {
+          nextVotes.delete(normalizedOptionId);
+        } else {
+          nextVotes.add(normalizedOptionId);
+        }
+        return { ...prev, [message.id]: Array.from(nextVotes) };
+      });
+      return;
+    }
+
+    try {
+      const payload = await apiRequest(
+        `conversations/${params.id}/messages/${message.id}/poll-votes`,
+        {
+          method: "POST",
+          body: { option_ids: [normalizedOptionId] }
+        }
+      );
+      const updatedPoll = payload?.data?.poll;
+      if (updatedPoll) {
+        updateMessagePoll(message.id, updatedPoll);
+      }
+    } catch {
+      // Ignore poll vote errors.
+    }
+  };
+
+  const submitPollSelection = async (message) => {
+    if (!message?.poll || !message.poll.allow_multiple) return;
+    if (message.poll.is_closed) return;
+    const selection = (pendingPollSelections[message.id] || [])
+      .map((id) => Number(id))
+      .filter(Boolean);
+    if (!selection.length) return;
+    try {
+      const payload = await apiRequest(
+        `conversations/${params.id}/messages/${message.id}/poll-votes`,
+        {
+          method: "POST",
+          body: { option_ids: selection }
+        }
+      );
+      const updatedPoll = payload?.data?.poll;
+      if (updatedPoll) {
+        updateMessagePoll(message.id, updatedPoll);
+      }
+    } catch {
+      // Ignore poll vote errors.
+    }
+  };
+
+  const handleClosePoll = async (message) => {
+    if (!message?.id) return;
+    try {
+      const payload = await apiRequest(
+        `conversations/${params.id}/messages/${message.id}/poll-close`,
+        { method: "POST" }
+      );
+      const updatedPoll = payload?.data?.poll;
+      if (updatedPoll) {
+        updateMessagePoll(message.id, updatedPoll);
+      }
+    } catch {
+      // Ignore poll close errors.
+    }
+  };
+
+  const handlePinMessage = async (message) => {
+    if (!message?.id) return;
+    try {
+      await apiRequest(
+        `conversations/${params.id}/messages/${message.id}/pin`,
+        { method: "POST" }
+      );
+      setPinnedMessage(message);
+    } catch {
+      // Ignore pin errors.
+    }
+  };
+
+  const handleUnpinMessage = async (message) => {
+    if (!message?.id) return;
+    try {
+      await apiRequest(
+        `conversations/${params.id}/messages/${message.id}/pin`,
+        { method: "DELETE" }
+      );
+      setPinnedMessage(null);
+    } catch {
+      // Ignore unpin errors.
+    }
+  };
+
+  const resetPollForm = () => {
+    setPollQuestion("");
+    setPollOptions(["", ""]);
+    setPollAllowMultiple(false);
+    setPollAllowChange(true);
+    setPollError("");
+  };
+
+  const openPollModal = () => {
+    resetPollForm();
+    setPollModalOpen(true);
+  };
+
+  const closePollModal = () => {
+    setPollModalOpen(false);
+    setPollError("");
+  };
+
+  const updatePollOption = (index, value) => {
+    setPollOptions((prev) =>
+      prev.map((option, optionIndex) =>
+        optionIndex === index ? value : option
+      )
+    );
+  };
+
+  const addPollOption = () => {
+    setPollOptions((prev) => {
+      if (prev.length >= 10) return prev;
+      return [...prev, ""];
+    });
+  };
+
+  const removePollOption = (index) => {
+    setPollOptions((prev) => {
+      if (prev.length <= 2) return prev;
+      return prev.filter((_, optionIndex) => optionIndex !== index);
+    });
+  };
+
+  const handleCreatePoll = async () => {
+    const trimmedQuestion = pollQuestion.trim();
+    const cleanedOptions = pollOptions
+      .map((option) => option.trim())
+      .filter(Boolean);
+
+    if (!trimmedQuestion) {
+      setPollError(t("poll.question_required"));
+      return;
+    }
+    if (cleanedOptions.length < 2) {
+      setPollError(t("poll.options_required"));
+      return;
+    }
+
+    setPollState("sending");
+    setPollError("");
+    try {
+      const response = await apiRequest(
+        `conversations/${params.id}/messages?lite=1`,
+        {
+          method: "POST",
+          body: {
+            content: trimmedQuestion,
+            type: "poll",
+            poll: {
+              options: cleanedOptions,
+              allow_multiple: pollAllowMultiple,
+              allow_change: pollAllowChange
+            }
+          }
+        }
+      );
+      const newMessage = normalizeMessage(response?.data || null);
+      if (newMessage) {
+        setMessages((prev) => mergeMessagesById(prev, [newMessage]));
+        stickToBottomRef.current = true;
+      }
+      closePollModal();
+    } catch (err) {
+      setPollError(err?.message || t("general.error_has_occurred"));
+    } finally {
+      setPollState("idle");
+    }
+  };
+
   const startReply = () => {
     if (!selectedMessage) return;
     setReplyToMessage(selectedMessage);
@@ -706,6 +1133,7 @@ export default function ConversationPage() {
     event.preventDefault();
     const trimmed = content.trim();
     if (!trimmed || sendState !== "idle") return;
+    stickToBottomRef.current = true;
     setSendState("sending");
     setSendError("");
     const tempId = `temp-${Date.now()}`;
@@ -727,6 +1155,7 @@ export default function ConversationPage() {
     const optimisticMessage = {
       id: tempId,
       content: trimmed,
+      type: "text",
       created_at: new Date().toISOString(),
       automatic: false,
       isTemp: true,
@@ -795,7 +1224,36 @@ export default function ConversationPage() {
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col rounded-3xl border border-[#EADAF1] bg-white p-4">
-        <div className="flex-1 overflow-y-auto pr-2">
+        <div
+          ref={messagesContainerRef}
+          onScroll={handleScroll}
+          className="flex-1 overflow-y-auto pr-2"
+        >
+          {pinnedMessage ? (
+            <div className="sticky top-0 z-10 mb-3 flex items-center gap-3 rounded-2xl border border-[#EADAF1] bg-white/95 px-3 py-2 text-xs text-secondary-500 shadow-sm backdrop-blur">
+              <button
+                type="button"
+                onClick={() => scrollToMessage(pinnedMessage.id)}
+                className="flex min-w-0 flex-1 items-center gap-2 text-left"
+              >
+                <MapPinIcon size={14} className="text-secondary-500" />
+                <div className="min-w-0">
+                  <p className="font-semibold text-secondary-700">
+                    {t("chat.pinned_message")}
+                  </p>
+                  <p className="truncate text-[11px] text-secondary-500">
+                    {getPinnedPreview(pinnedMessage)}
+                  </p>
+                </div>
+              </button>
+            </div>
+          ) : null}
+
+          {isLoadingOlder ? (
+            <div className="flex items-center justify-center py-2 text-xs text-secondary-400">
+              {t("chat.loading_older")}
+            </div>
+          ) : null}
           {status === "loading" ? (
             <div className="space-y-3">
               {Array.from({ length: 4 }).map((_, index) => (
@@ -833,6 +1291,26 @@ export default function ConversationPage() {
                     : [];
                   const isHighlighted =
                     Number(message?.id) === Number(highlightedMessageId);
+                  const poll = message?.type === "poll" ? message.poll : null;
+                  const pollTotalVotes = poll?.options?.reduce(
+                    (sum, option) => sum + (option?.votes_count || 0),
+                    0
+                  );
+                  const pendingSelection = poll?.allow_multiple
+                    ? pendingPollSelections[message.id]
+                    : null;
+                  const pollSelection =
+                    poll?.allow_multiple && Array.isArray(pendingSelection)
+                      ? pendingSelection
+                      : poll?.my_votes || [];
+                  const hasPendingSelection =
+                    poll?.allow_multiple &&
+                    Array.isArray(pendingSelection) &&
+                    !hasSameIds(pendingSelection, poll?.my_votes || []);
+                  const canEditSelection =
+                    poll &&
+                    !poll.is_closed &&
+                    (poll.allow_change || (poll.my_votes || []).length === 0);
                   if (message?.automatic) {
                     return (
                       <div
@@ -947,9 +1425,106 @@ export default function ConversationPage() {
                                 </p>
                               </div>
                             ) : null}
-                            <p className="mt-1 text-sm leading-relaxed">
-                              {message.content}
-                            </p>
+                            {poll ? (
+                              <div className="mt-1 space-y-2">
+                                <p className="text-sm font-semibold text-primary-900">
+                                  {message.content}
+                                </p>
+                                <div className="space-y-2">
+                                  {(poll.options || []).map((option) => {
+                                    const isSelected = pollSelection.includes(
+                                      option.id
+                                    );
+                                    const percent = pollTotalVotes
+                                      ? Math.round(
+                                          (option.votes_count /
+                                            pollTotalVotes) *
+                                            100
+                                        )
+                                      : 0;
+                                    return (
+                                      <button
+                                        key={`poll-option-${message.id}-${option.id}`}
+                                        type="button"
+                                        disabled={!canEditSelection}
+                                        onClick={() =>
+                                          handlePollVote(message, option.id)
+                                        }
+                                        className={`w-full rounded-2xl border px-3 py-2 text-left text-sm transition ${
+                                          isSelected
+                                            ? "border-secondary-500 bg-[#F7F1FA] text-primary-900"
+                                            : "border-[#EADAF1] bg-white text-secondary-700"
+                                        } ${
+                                          canEditSelection
+                                            ? "hover:bg-[#F7F1FA]"
+                                            : "cursor-default opacity-70"
+                                        }`}
+                                      >
+                                        <div className="flex items-center justify-between gap-2">
+                                          <span className="flex-1">
+                                            {option.label}
+                                          </span>
+                                          <span className="text-[11px] text-secondary-500">
+                                            {option.votes_count}
+                                          </span>
+                                        </div>
+                                        <div className="mt-2 h-1 w-full rounded-full bg-[#EADAF1]">
+                                          <div
+                                            className="h-full rounded-full bg-secondary-500"
+                                            style={{
+                                              width: `${percent}%`
+                                            }}
+                                          />
+                                        </div>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                                <div className="flex items-center justify-between text-[11px] text-secondary-400">
+                                  <span>
+                                    {t("poll.votes", {
+                                      count: pollTotalVotes
+                                    })}
+                                  </span>
+                                  <div className="flex items-center gap-2">
+                                    {poll.allow_multiple ? (
+                                      <span>{t("poll.multi_choice")}</span>
+                                    ) : (
+                                      <span>{t("poll.single_choice")}</span>
+                                    )}
+                                    {poll.is_closed ? (
+                                      <span>{t("poll.closed")}</span>
+                                    ) : null}
+                                  </div>
+                                </div>
+                                {poll.allow_multiple && canEditSelection ? (
+                                  <div className="flex justify-end">
+                                    <button
+                                      type="button"
+                                      disabled={
+                                        !hasPendingSelection ||
+                                        pollSelection.length === 0
+                                      }
+                                      onClick={() =>
+                                        submitPollSelection(message)
+                                      }
+                                      className={`rounded-full px-3 py-1 text-[11px] font-semibold ${
+                                        hasPendingSelection &&
+                                        pollSelection.length > 0
+                                          ? "bg-secondary-500 text-white"
+                                          : "bg-[#EADAF1] text-secondary-400"
+                                      }`}
+                                    >
+                                      {t("poll.submit")}
+                                    </button>
+                                  </div>
+                                ) : null}
+                              </div>
+                            ) : (
+                              <p className="mt-1 text-sm leading-relaxed">
+                                {message.content}
+                              </p>
+                            )}
                             <div
                               className={`mt-2 flex items-center ${
                                 isMine ? "justify-end gap-2" : "justify-start"
@@ -1049,6 +1624,16 @@ export default function ConversationPage() {
         onSubmit={handleSend}
         className="flex items-center gap-2 rounded-full border border-[#EADAF1] bg-white px-3 py-2"
       >
+        {isOfferOwner ? (
+          <button
+            type="button"
+            onClick={openPollModal}
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-[#EADAF1] text-secondary-600 transition hover:bg-[#F7F1FA]"
+            aria-label={t("poll.create")}
+          >
+            <PlusIcon size={18} className="text-secondary-600" />
+          </button>
+        ) : null}
         <input
           ref={inputRef}
           value={content}
@@ -1075,6 +1660,105 @@ export default function ConversationPage() {
       {sendError ? (
         <p className="text-xs text-danger-600">{sendError}</p>
       ) : null}
+      <Modal
+        open={isPollModalOpen}
+        title={t("poll.create_title")}
+        onClose={closePollModal}
+      >
+        <div className="space-y-4">
+          <label className="space-y-1 text-sm font-semibold text-primary-900">
+            <span>{t("poll.question")}</span>
+            <input
+              value={pollQuestion}
+              onChange={(event) => setPollQuestion(event.target.value)}
+              className="w-full rounded-2xl border border-[#EADAF1] px-3 py-2 text-sm text-secondary-600"
+              placeholder={t("poll.question_placeholder")}
+            />
+          </label>
+          <div className="space-y-2">
+            <p className="text-sm font-semibold text-primary-900">
+              {t("poll.options")}
+            </p>
+            {pollOptions.map((option, index) => (
+              <div
+                key={`poll-option-${index}`}
+                className="flex items-center gap-2"
+              >
+                <input
+                  value={option}
+                  onChange={(event) =>
+                    updatePollOption(index, event.target.value)
+                  }
+                  className="w-full rounded-2xl border border-[#EADAF1] px-3 py-2 text-sm text-secondary-600"
+                  placeholder={t("poll.option_placeholder", {
+                    count: index + 1
+                  })}
+                />
+                {pollOptions.length > 2 ? (
+                  <button
+                    type="button"
+                    onClick={() => removePollOption(index)}
+                    className="h-10 w-10 rounded-full border border-[#EADAF1] text-sm text-secondary-500 transition hover:bg-[#F7F1FA]"
+                    aria-label={t("poll.remove_option")}
+                  >
+                    x
+                  </button>
+                ) : null}
+              </div>
+            ))}
+            {pollOptions.length < 10 ? (
+              <button
+                type="button"
+                onClick={addPollOption}
+                className="text-xs font-semibold text-secondary-600"
+              >
+                {t("poll.add_option")}
+              </button>
+            ) : null}
+          </div>
+          <div className="space-y-2 text-sm text-secondary-600">
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={pollAllowMultiple}
+                onChange={(event) =>
+                  setPollAllowMultiple(event.target.checked)
+                }
+              />
+              <span>{t("poll.allow_multiple")}</span>
+            </label>
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={pollAllowChange}
+                onChange={(event) => setPollAllowChange(event.target.checked)}
+              />
+              <span>{t("poll.allow_change")}</span>
+            </label>
+          </div>
+          {pollError ? (
+            <p className="text-xs text-danger-600">{pollError}</p>
+          ) : null}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={closePollModal}
+              className="w-full rounded-full border border-[#EADAF1] px-4 py-2 text-sm font-semibold text-secondary-600 transition hover:bg-[#F7F1FA]"
+              disabled={pollState === "sending"}
+            >
+              {t("Cancel")}
+            </button>
+            <button
+              type="button"
+              onClick={handleCreatePoll}
+              className="w-full rounded-full bg-secondary-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-secondary-600 disabled:opacity-60"
+              disabled={pollState === "sending"}
+            >
+              {pollState === "sending" ? t("poll.creating") : t("poll.create")}
+            </button>
+          </div>
+        </div>
+      </Modal>
       <Modal
         open={isActionModalOpen}
         title={t("Message options")}
@@ -1114,6 +1798,36 @@ export default function ConversationPage() {
                 className="w-full rounded-2xl border border-[#EADAF1] px-4 py-3 text-sm font-semibold text-primary-900 transition hover:bg-[#F7F1FA]"
               >
                 {t("Copy message")}
+              </button>
+            ) : null}
+            {isOfferOwner && !selectedMessage?.automatic ? (
+              <button
+                type="button"
+                onClick={async () => {
+                  if (selectedIsPinned) {
+                    await handleUnpinMessage(selectedMessage);
+                  } else {
+                    await handlePinMessage(selectedMessage);
+                  }
+                  closeActionModal();
+                }}
+                className="w-full rounded-2xl border border-[#EADAF1] px-4 py-3 text-sm font-semibold text-primary-900 transition hover:bg-[#F7F1FA]"
+              >
+                {selectedIsPinned ? t("chat.unpin") : t("chat.pin")}
+              </button>
+            ) : null}
+            {isOfferOwner &&
+            selectedMessage?.poll &&
+            !selectedMessage.poll?.is_closed ? (
+              <button
+                type="button"
+                onClick={async () => {
+                  await handleClosePoll(selectedMessage);
+                  closeActionModal();
+                }}
+                className="w-full rounded-2xl border border-[#EADAF1] px-4 py-3 text-sm font-semibold text-primary-900 transition hover:bg-[#F7F1FA]"
+              >
+                {t("poll.close")}
               </button>
             ) : null}
             {selectedIsMine ? (
