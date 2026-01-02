@@ -99,6 +99,12 @@ export default function ProfilePage() {
     }).format(date);
     return `${day} ${month} ${year}`;
   };
+  const formatExtraInfoValue = (value) => {
+    if (Array.isArray(value)) {
+      return value.join(", ");
+    }
+    return String(value);
+  };
   const getAge = (profileUser) => {
     if (typeof profileUser?.age === "number") return profileUser.age;
     if (!profileUser?.date_of_birth) return null;
@@ -268,7 +274,7 @@ export default function ProfilePage() {
                     <p className="mt-2 text-sm font-semibold text-primary-900">
                       {item.key === "date_of_birth"
                         ? formatBirthday(item.value)
-                        : String(item.value)}
+                        : formatExtraInfoValue(item.value)}
                     </p>
                   </div>
                 ))}
@@ -286,11 +292,11 @@ export default function ProfilePage() {
                     {extraInfoExtras.map(([key, value]) => (
                       <span
                         key={key}
-                          className="rounded-full bg-white px-3 py-2 text-xs font-semibold text-secondary-600"
-                        >
-                          {String(value)}
-                        </span>
-                      ))}
+                        className="rounded-full bg-white px-3 py-2 text-xs font-semibold text-secondary-600"
+                      >
+                        {formatExtraInfoValue(value)}
+                      </span>
+                    ))}
                     </div>
                   </div>
                 ) : null}

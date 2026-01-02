@@ -184,6 +184,12 @@ export default function UserProfilePage() {
     }).format(date);
     return `${day} ${month} ${year}`;
   };
+  const formatExtraInfoValue = (value) => {
+    if (Array.isArray(value)) {
+      return value.join(", ");
+    }
+    return String(value);
+  };
 
   const stats = [
     { label: t("profile.member_since"), value: memberSinceLabel },
@@ -312,7 +318,7 @@ export default function UserProfilePage() {
                     <p className="mt-2 text-sm font-semibold text-primary-900">
                       {item.key === "date_of_birth"
                         ? formatBirthday(item.value)
-                        : String(item.value)}
+                        : formatExtraInfoValue(item.value)}
                     </p>
                   </div>
                 ))}
@@ -332,7 +338,7 @@ export default function UserProfilePage() {
                           key={key}
                           className="rounded-full bg-white px-3 py-2 text-xs font-semibold text-secondary-600"
                         >
-                          {String(value)}
+                          {formatExtraInfoValue(value)}
                         </span>
                       ))}
                     </div>
