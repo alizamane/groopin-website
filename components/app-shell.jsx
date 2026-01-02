@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
@@ -39,6 +39,7 @@ export default function AppShell({ children }) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [unreadGroopsCount, setUnreadGroopsCount] = useState(0);
   const [webPushReady, setWebPushReady] = useState(false);
+  const activeConversationIdRef = useRef(null);
 
   const menuItems = [
     { label: t("Favorites"), href: "/app/auth/favorites", icon: HeartIcon },
@@ -94,14 +95,16 @@ export default function AppShell({ children }) {
 
   const refreshGroopsCount = useCallback(
     async (activeConversationId = null) => {
+      const resolvedActiveConversationId =
+        activeConversationId ?? activeConversationIdRef.current;
       try {
         const payload = await apiRequest("conversations?lite=1");
         const data = payload?.data || [];
         const metaCount = payload?.meta?.has_unread_messages_count;
         const computed = data.reduce((sum, conversation) => {
           if (
-            activeConversationId &&
-            Number(conversation?.id) === Number(activeConversationId)
+            resolvedActiveConversationId &&
+            Number(conversation?.id) === Number(resolvedActiveConversationId)
           ) {
             return sum;
           }
@@ -117,7 +120,7 @@ export default function AppShell({ children }) {
           return sum;
         }, 0);
 
-        if (activeConversationId) {
+        if (resolvedActiveConversationId) {
           setUnreadGroopsCount(computed);
           return;
         }
@@ -178,6 +181,7 @@ export default function AppShell({ children }) {
   useEffect(() => {
     const match = pathname.match(/\/app\/auth\/conversations\/(\d+)/);
     const activeConversationId = match ? Number(match[1]) : null;
+    activeConversationIdRef.current = activeConversationId;
     if (activeConversationId) {
       refreshGroopsCount(activeConversationId);
     }

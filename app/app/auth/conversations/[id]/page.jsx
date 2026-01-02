@@ -13,6 +13,14 @@ import { getEcho } from "../../../../lib/realtime-client";
 import { getUser } from "../../../../lib/session";
 
 const reactionOptions = ["❤️", "😂", "👍", "😮", "😢", "👏"];
+const nameColorClasses = [
+  "text-secondary-600",
+  "text-primary-700",
+  "text-[#B12587]",
+  "text-[#1F7A7A]",
+  "text-[#AA4B2A]",
+  "text-[#3B5BDB]"
+];
 
 const formatDay = (value, locale) => {
   if (!value) return "";
@@ -445,6 +453,18 @@ export default function ConversationPage() {
     return `${trimmed.slice(0, 80)}...`;
   };
 
+  const getNameColorClass = (userId) => {
+    const palette = nameColorClasses;
+    if (!palette.length) return "text-secondary-600";
+    const idValue = userId ?? "";
+    const raw = String(idValue);
+    let hash = 0;
+    for (let index = 0; index < raw.length; index += 1) {
+      hash = (hash * 31 + raw.charCodeAt(index)) % palette.length;
+    }
+    return palette[hash] || "text-secondary-600";
+  };
+
   const setMessageRef = (messageId) => (node) => {
     if (!messageId) return;
     if (node) {
@@ -866,7 +886,9 @@ export default function ConversationPage() {
                                 size={26}
                                 withBorder
                               />
-                              <p className="text-xs font-semibold text-primary-900">
+                              <p
+                                className={`text-xs font-semibold ${getNameColorClass(message?.user?.id)}`}
+                              >
                                 {getUserDisplayName(message.user)}
                               </p>
                             </div>
@@ -903,7 +925,7 @@ export default function ConversationPage() {
                             }
                           >
                             {!isMine ? (
-                              <span className="pointer-events-none absolute left-0 top-4 h-3 w-3 -translate-x-1.5 rotate-45 bg-[#F4F4F5]" />
+                              <span className="pointer-events-none absolute -left-2 top-5 h-4 w-4 rotate-45 rounded-sm bg-[#F4F4F5] shadow-sm" />
                             ) : null}
                             {message.reply_to ? (
                               <div
