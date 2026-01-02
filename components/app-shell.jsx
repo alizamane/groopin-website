@@ -388,13 +388,6 @@ export default function AppShell({ children }) {
         <div className="mt-10 text-center text-sm text-secondary-400">
           Groopin - V 1.1.1
         </div>
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="mt-4 w-full rounded-full border border-neutral-300 py-2 text-sm font-semibold text-primary-900"
-        >
-          {t("Logout")}
-        </button>
       </aside>
 
       <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-[#EADAF1] bg-white/95 px-4 py-3 backdrop-blur">
