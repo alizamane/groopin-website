@@ -365,6 +365,16 @@ export default function ConversationPage() {
     return getSeenUsersForMessage(selectedMessage.id);
   }, [selectedMessage, otherReaders]);
 
+  const typingLabel = useMemo(() => {
+    if (!typingUsers.length) return "";
+    const names = typingUsers
+      .map((user) => user.first_name || user.name || "")
+      .filter(Boolean)
+      .join(", ");
+    if (!names) return "";
+    return `${names} ${t("is typing...")}`;
+  }, [typingUsers, t]);
+
   const selectedIsMine = useMemo(() => {
     if (!selectedMessage?.user?.id || currentUserId === null) return false;
     return Number(selectedMessage.user.id) === currentUserId;
@@ -741,20 +751,16 @@ export default function ConversationPage() {
                   );
                 });
               })()}
-              {typingUsers.length ? (
-                <div className="text-xs text-primary-900">
-                  {typingUsers
-                    .map((user) => user.first_name || user.name || "")
-                    .filter(Boolean)
-                    .join(", ")}{" "}
-                  {t("is typing...")}
-                </div>
-              ) : null}
               <div ref={bottomRef} />
             </div>
           ) : null}
         </div>
       </div>
+      {typingLabel ? (
+        <div className="px-2 text-xs font-semibold text-primary-900">
+          {typingLabel}
+        </div>
+      ) : null}
 
       <form
         onSubmit={handleSend}
