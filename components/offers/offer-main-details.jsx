@@ -11,43 +11,6 @@ import {
 } from "../ui/heroicons";
 import Modal from "../ui/modal";
 
-const KNOWN_PLACE_TYPES = new Set([
-  "establishment",
-  "point_of_interest",
-  "park",
-  "tourist_attraction",
-  "museum",
-  "natural_feature"
-]);
-
-const normalizePlaceTypes = (value) => {
-  if (Array.isArray(value)) {
-    return value.map((item) => String(item).toLowerCase());
-  }
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    if (!trimmed) return [];
-    if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
-      try {
-        const parsed = JSON.parse(trimmed);
-        if (Array.isArray(parsed)) {
-          return parsed.map((item) => String(item).toLowerCase());
-        }
-      } catch {
-        return [];
-      }
-    }
-    return trimmed
-      .split(",")
-      .map((item) => item.trim().toLowerCase())
-      .filter(Boolean);
-  }
-  return [];
-};
-
-const isKnownPlaceType = (types) =>
-  types.some((type) => KNOWN_PLACE_TYPES.has(type));
-
 const formatShortToken = (date, locale, options) => {
   const value = new Intl.DateTimeFormat(locale, options).format(date);
   const normalized = value.replace(/\./g, "").trim().slice(0, 3);
@@ -88,11 +51,7 @@ export default function OfferMainDetails({ offer, enablePlacePreview = false }) 
   const address = [cityName, addressText].filter(Boolean).join(" - ");
   const place = offer?.place || {};
   const hasPlace = Boolean(place?.id || (place?.lat && place?.lng));
-  const placeTypes = normalizePlaceTypes(place?.types);
-  const isPhotoEligible = isKnownPlaceType(placeTypes);
   const [isPlaceOpen, setIsPlaceOpen] = useState(false);
-  const [photoError, setPhotoError] = useState(false);
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY;
   const mapQuery = useMemo(() => {
     if (place?.lat && place?.lng) {
       return `${place.lat},${place.lng}`;
@@ -109,11 +68,6 @@ export default function OfferMainDetails({ offer, enablePlacePreview = false }) 
     (mapQuery
       ? `https://maps.google.com/?q=${encodeURIComponent(mapQuery)}`
       : "");
-  const photoUrl =
-    apiKey && place?.photo_reference
-      ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=1200&photo_reference=${place.photo_reference}&key=${apiKey}`
-      : "";
-  const canShowPhoto = Boolean(photoUrl && isPhotoEligible && !photoError);
   const dateLabel = formatDate(offer?.start_date, dateLocale);
   const timeLabel = formatTime(offer?.start_time);
   const endDateLabel = formatDate(offer?.end_date, dateLocale);
@@ -184,31 +138,28 @@ export default function OfferMainDetails({ offer, enablePlacePreview = false }) 
       <Modal
         open={enablePlacePreview && hasPlace && isPlaceOpen}
         onClose={() => setIsPlaceOpen(false)}
-        title={t("offers.location_details")}
+        title={null}
       >
         <div className="space-y-4">
-          <div>
-            <p className="text-sm font-semibold text-primary-900">
-              {place?.name || address || "-"}
-            </p>
-            {address ? (
-              <p className="text-xs text-secondary-400">{address}</p>
-            ) : null}
-          </div>
-          <div className="overflow-hidden rounded-2xl border border-neutral-100">
-            {canShowPhoto ? (
-              <img
-                src={photoUrl}
-                alt={place?.name || address || t("offers.place_photo")}
-                className="h-44 w-full object-cover"
-                onError={() => setPhotoError(true)}
-                loading="lazy"
-              />
-            ) : (
-              <div className="flex h-44 items-center justify-center bg-[#F7F1FA] text-xs text-secondary-400">
-                {t("offers.place_photo_unavailable")}
-              </div>
-            )}
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-secondary-400">
+                {t("offers.location_details")}
+              </span>
+              <p className="text-sm font-semibold text-primary-900">
+                {place?.name || address || "-"}
+              </p>
+              {address ? (
+                <p className="text-xs text-secondary-400">{address}</p>
+              ) : null}
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsPlaceOpen(false)}
+              className="shrink-0 text-xs font-semibold text-secondary-500"
+            >
+              {t("Close")}
+            </button>
           </div>
           <div className="overflow-hidden rounded-2xl border border-neutral-100">
             {mapEmbedSrc ? (
