@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 
 import Button from "../../../../../components/ui/button";
 import Checkbox from "../../../../../components/ui/checkbox";
+import DateTimeField from "../../../../../components/ui/date-time-field";
 import Input from "../../../../../components/ui/input";
-import useSupportedInputType from "../../../../../components/ui/input-support";
 import { useI18n } from "../../../../../components/i18n-provider";
 import { apiRequest } from "../../../../lib/api-client";
 import PlaceAutocomplete from "../../../../../components/offers/place-autocomplete";
@@ -75,16 +75,6 @@ const normalizeFieldError = (errors, field) => {
 const normalizeQuestionType = (type) =>
   String(type || "").replace("-", "_");
 
-const formatDateForInput = (value, useFallback) => {
-  const trimmed = String(value || "").trim();
-  if (!useFallback) return trimmed;
-  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
-    const [year, month, day] = trimmed.split("-");
-    return `${day}/${month}/${year}`;
-  }
-  return trimmed;
-};
-
 const normalizeDateForApi = (value) => {
   const trimmed = String(value || "").trim();
   if (!trimmed) return null;
@@ -136,22 +126,6 @@ const formatCategoryLabel = (label) => {
 export default function CreateOfferPage() {
   const router = useRouter();
   const { t } = useI18n();
-  const dateInputType = useSupportedInputType("date");
-  const timeInputType = useSupportedInputType("time");
-  const isDateFallback = dateInputType === "text";
-  const isTimeFallback = timeInputType === "text";
-  const dateFallbackMeta = isDateFallback
-    ? {
-        placeholder: "JJ/MM/AAAA",
-        pattern: "[0-9]{2}/[0-9]{2}/[0-9]{4}"
-      }
-    : {};
-  const timeFallbackMeta = isTimeFallback
-    ? {
-        placeholder: "HH:MM",
-        pattern: "[0-9]{2}:[0-9]{2}"
-      }
-    : {};
   const [categories, setCategories] = useState([]);
   const [cities, setCities] = useState([]);
   const [countryCode, setCountryCode] = useState("");
@@ -457,74 +431,44 @@ export default function CreateOfferPage() {
 
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-3 max-[360px]:grid-cols-1 sm:gap-4">
-          <Input
+          <DateTimeField
             name="start_date"
             label={renderRequiredLabel(t("offers.start_date"))}
-            type="date"
-            value={formatDateForInput(formValues.start_date, isDateFallback)}
-            onChange={(event) => updateField("start_date", event.target.value)}
+            value={formValues.start_date}
+            onChange={(value) => updateField("start_date", value)}
             error={normalizeFieldError(fieldErrors, "start_date")}
-            inputClassName="brand-picker"
-            placeholder={
-              isDateFallback
-                ? dateFallbackMeta.placeholder
-                : t("offers.start_date_placeholder")
-            }
-            pattern={isDateFallback ? dateFallbackMeta.pattern : undefined}
-            inputMode={isDateFallback ? "text" : undefined}
+            placeholder={t("offers.start_date_placeholder")}
             required
           />
-          <Input
+          <DateTimeField
             name="start_time"
             label={renderRequiredLabel(t("offers.start_time"))}
             type="time"
             value={formValues.start_time}
-            onChange={(event) => updateField("start_time", event.target.value)}
+            onChange={(value) => updateField("start_time", value)}
             error={normalizeFieldError(fieldErrors, "start_time")}
-            inputClassName="brand-picker"
-            placeholder={
-              isTimeFallback
-                ? timeFallbackMeta.placeholder
-                : t("offers.start_time_placeholder")
-            }
-            pattern={isTimeFallback ? timeFallbackMeta.pattern : undefined}
-            inputMode={isTimeFallback ? "text" : undefined}
+            placeholder={t("offers.start_time_placeholder")}
             required
           />
         </div>
         <div className="grid grid-cols-2 gap-3 max-[360px]:grid-cols-1 sm:gap-4">
-          <Input
+          <DateTimeField
             name="end_date"
             label={renderRequiredLabel(t("offers.end_date"))}
-            type="date"
-            value={formatDateForInput(formValues.end_date, isDateFallback)}
-            onChange={(event) => updateField("end_date", event.target.value)}
+            value={formValues.end_date}
+            onChange={(value) => updateField("end_date", value)}
             error={normalizeFieldError(fieldErrors, "end_date")}
-            inputClassName="brand-picker"
-            placeholder={
-              isDateFallback
-                ? dateFallbackMeta.placeholder
-                : t("offers.end_date_placeholder")
-            }
-            pattern={isDateFallback ? dateFallbackMeta.pattern : undefined}
-            inputMode={isDateFallback ? "text" : undefined}
+            placeholder={t("offers.end_date_placeholder")}
             required
           />
-          <Input
+          <DateTimeField
             name="end_time"
             label={renderRequiredLabel(t("offers.end_time"))}
             type="time"
             value={formValues.end_time}
-            onChange={(event) => updateField("end_time", event.target.value)}
+            onChange={(value) => updateField("end_time", value)}
             error={normalizeFieldError(fieldErrors, "end_time")}
-            inputClassName="brand-picker"
-            placeholder={
-              isTimeFallback
-                ? timeFallbackMeta.placeholder
-                : t("offers.end_time_placeholder")
-            }
-            pattern={isTimeFallback ? timeFallbackMeta.pattern : undefined}
-            inputMode={isTimeFallback ? "text" : undefined}
+            placeholder={t("offers.end_time_placeholder")}
             required
           />
         </div>
@@ -800,16 +744,15 @@ export default function CreateOfferPage() {
 
             if (questionType === "date") {
               return (
-                <Input
+                <DateTimeField
                   key={question.id}
                   label={question.label}
                   type="date"
                   value={questionValue || ""}
-                  onChange={(event) =>
-                    updateDynamicQuestion(question.name, event.target.value)
+                  onChange={(value) =>
+                    updateDynamicQuestion(question.name, value)
                   }
                   error={error}
-                  inputClassName="brand-picker"
                 />
               );
             }

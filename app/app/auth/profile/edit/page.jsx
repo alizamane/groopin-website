@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 import UserAvatar from "../../../../../components/user/user-avatar";
 import Button from "../../../../../components/ui/button";
+import DateTimeField from "../../../../../components/ui/date-time-field";
 import Input from "../../../../../components/ui/input";
 import RadioGroup from "../../../../../components/ui/radio-group";
 import Modal from "../../../../../components/ui/modal";
@@ -688,12 +689,11 @@ export default function ProfileEditPage() {
           error={normalizeFieldError(fieldErrors, "last_name")}
           required
         />
-        <Input
+        <DateTimeField
           name="date_of_birth"
           label={t("date_of_birth")}
-          type="date"
           value={formValues.date_of_birth || ""}
-          onChange={(event) => updateField("date_of_birth", event.target.value)}
+          onChange={(value) => updateField("date_of_birth", value)}
           error={normalizeFieldError(fieldErrors, "date_of_birth")}
         />
 
@@ -825,13 +825,13 @@ export default function ProfileEditPage() {
 
               if (questionType === "date") {
                 return (
-                  <Input
+                  <DateTimeField
                     key={question.id}
                     label={question.label}
                     type="date"
                     value={questionValue || ""}
-                    onChange={(event) =>
-                      updateDynamicQuestion(question.name, event.target.value)
+                    onChange={(value) =>
+                      updateDynamicQuestion(question.name, value)
                     }
                     error={error}
                   />

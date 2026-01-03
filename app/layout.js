@@ -1,3 +1,4 @@
+import "react-datepicker/dist/react-datepicker.css";
 import "./globals.css";
 import { Lato } from "next/font/google";
 import { I18nProvider } from "../components/i18n-provider";

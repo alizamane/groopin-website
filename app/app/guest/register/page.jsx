@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 
 import Button from "../../../../components/ui/button";
 import Checkbox from "../../../../components/ui/checkbox";
+import DateTimeField from "../../../../components/ui/date-time-field";
 import Input from "../../../../components/ui/input";
 import RadioGroup from "../../../../components/ui/radio-group";
 import { useI18n } from "../../../../components/i18n-provider";
@@ -18,6 +19,7 @@ export default function RegisterPage() {
   const [status, setStatus] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [sex, setSex] = useState("male");
+  const [dateOfBirth, setDateOfBirth] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false);
 
   const onSubmit = async (event) => {
@@ -38,7 +40,7 @@ export default function RegisterPage() {
         last_name: formData.get("last_name")?.toString().trim(),
         email: formData.get("email")?.toString().trim(),
         sex,
-        date_of_birth: formData.get("date_of_birth")?.toString() || null,
+        date_of_birth: dateOfBirth || null,
         password: formData.get("password")?.toString(),
         password_confirmation: formData
           .get("password_confirmation")
@@ -91,7 +93,12 @@ export default function RegisterPage() {
         <Input name="first_name" label={t("First Name")} required />
         <Input name="last_name" label={t("Last Name")} required />
         <Input name="email" label={t("Email")} type="email" required />
-        <Input name="date_of_birth" label={t("date_of_birth")} type="date" />
+        <DateTimeField
+          name="date_of_birth"
+          label={t("date_of_birth")}
+          value={dateOfBirth}
+          onChange={setDateOfBirth}
+        />
         <Input name="password" label={t("Password")} type="password" required />
         <Input
           name="password_confirmation"
