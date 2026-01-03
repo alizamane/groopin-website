@@ -75,7 +75,6 @@ export default function DateTimeField({
   errorClassName = "",
   variant = "default",
   timeIntervals = 15,
-  disableMobileKeyboard = true,
   onFocus,
   onBlur,
   ...props
@@ -93,7 +92,6 @@ export default function DateTimeField({
     : focused
       ? "border-primary-500"
       : "border-[#EADAF1]";
-  const shouldReadOnly = disableMobileKeyboard && isNarrowScreen;
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
@@ -169,8 +167,6 @@ export default function DateTimeField({
           placeholderText={placeholder}
           className={`${config.input} ${inputClassName}`}
           wrapperClassName="min-w-0 flex-1"
-          readOnly={shouldReadOnly}
-          inputMode={shouldReadOnly ? "none" : undefined}
           showPopperArrow={false}
           {...props}
         />
