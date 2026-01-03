@@ -289,6 +289,19 @@ body {
 .react-datepicker-wrapper,
 .react-datepicker__input-container {
   width: 100%;
+  min-width: 0;
+}
+
+.react-datepicker-wrapper {
+  flex: 1 1 auto;
+}
+
+.react-datepicker__input-container input {
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .react-datepicker__header {
@@ -336,9 +349,14 @@ body {
 
 .react-datepicker__portal {
   background-color: rgba(30, 30, 30, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  box-sizing: border-box;
 }
 
 .react-datepicker__portal .react-datepicker {
   max-width: 92vw;
-  width: 100%;
+  width: auto;
 }

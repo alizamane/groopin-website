@@ -49,7 +49,7 @@ const variants = {
     label: "mb-1 block text-lg text-primary-500",
     container: "flex items-center gap-3 rounded-full border-2 px-4 py-3",
     input:
-      "min-w-0 flex-1 truncate bg-transparent text-secondary-400 outline-none placeholder:text-neutral-400",
+      "min-w-0 w-full truncate bg-transparent text-secondary-400 outline-none placeholder:text-neutral-400",
     error: "mt-2 text-sm text-danger-600"
   },
   compact: {
@@ -166,7 +166,7 @@ export default function DateTimeField({
           dateFormat={isTime ? "HH:mm" : "dd/MM/yyyy"}
           placeholderText={placeholder}
           className={`${config.input} ${inputClassName}`}
-          wrapperClassName="w-full"
+          wrapperClassName="min-w-0 flex-1"
           showPopperArrow={false}
           {...props}
         />
