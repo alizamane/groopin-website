@@ -1148,7 +1148,7 @@ export default function OfferDetailsPage() {
               ) : null}
             </div>
             <div className="mt-4">
-              <OfferMainDetails offer={offer} />
+              <OfferMainDetails offer={offer} enablePlacePreview />
             </div>
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
               <div className="rounded-2xl border border-[#EADAF1] bg-white px-4 py-3">

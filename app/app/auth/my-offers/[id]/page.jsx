@@ -1005,7 +1005,7 @@ export default function MyOfferDetailsPage() {
           {ownerTab === "overview" ? (
             <>
               <div className="rounded-3xl border border-[#EADAF1] bg-white p-5">
-                <OfferMainDetails offer={offer} />
+                <OfferMainDetails offer={offer} enablePlacePreview />
               </div>
 
               <div className="rounded-3xl border border-[#EADAF1] bg-white p-5">

@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useMemo, useState } from "react";
 
 import { useI18n } from "../i18n-provider";
 import { getLocalizedText } from "./offer-text";
@@ -9,6 +9,7 @@ import {
   MapPinIcon,
   TagIcon
 } from "../ui/heroicons";
+import Modal from "../ui/modal";
 
 const formatShortToken = (date, locale, options) => {
   const value = new Intl.DateTimeFormat(locale, options).format(date);
@@ -41,13 +42,38 @@ const formatTime = (value) => {
 
 const iconProps = { size: 14, className: "text-secondary-500", strokeWidth: 1.5 };
 
-export default function OfferMainDetails({ offer }) {
+export default function OfferMainDetails({ offer, enablePlacePreview = false }) {
   const { t, locale } = useI18n();
   const dateLocale =
     locale === "fr" ? "fr-FR" : locale === "ar" ? "ar-MA" : "en-GB";
   const cityName = getLocalizedText(offer?.city?.name, locale);
   const addressText = getLocalizedText(offer?.address, locale);
   const address = [cityName, addressText].filter(Boolean).join(" - ");
+  const place = offer?.place || {};
+  const hasPlace = Boolean(place?.id || (place?.lat && place?.lng));
+  const [isPlaceOpen, setIsPlaceOpen] = useState(false);
+  const [photoError, setPhotoError] = useState(false);
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY;
+  const mapQuery = useMemo(() => {
+    if (place?.lat && place?.lng) {
+      return `${place.lat},${place.lng}`;
+    }
+    return "";
+  }, [place?.lat, place?.lng]);
+  const mapEmbedSrc = mapQuery
+    ? `https://maps.google.com/maps?q=${encodeURIComponent(
+        mapQuery
+      )}&z=15&output=embed`
+    : "";
+  const placeUrl =
+    place?.url ||
+    (mapQuery
+      ? `https://maps.google.com/?q=${encodeURIComponent(mapQuery)}`
+      : "");
+  const photoUrl =
+    apiKey && place?.photo_reference
+      ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=1200&photo_reference=${place.photo_reference}&key=${apiKey}`
+      : "";
   const dateLabel = formatDate(offer?.start_date, dateLocale);
   const timeLabel = formatTime(offer?.start_time);
   const endDateLabel = formatDate(offer?.end_date, dateLocale);
@@ -94,10 +120,82 @@ export default function OfferMainDetails({ offer }) {
         <TagIcon {...iconProps} />
         <span className="truncate font-medium">{priceLabel}</span>
       </div>
-      <div className="flex w-full min-w-0 items-center gap-2 rounded-2xl bg-[#F7F1FA] px-3 py-2 text-primary-900 sm:col-span-2">
-        <MapPinIcon {...iconProps} />
-        <span className="truncate font-medium">{address || "-"}</span>
-      </div>
+      {enablePlacePreview && hasPlace ? (
+        <button
+          type="button"
+          onClick={() => setIsPlaceOpen(true)}
+          className="flex w-full min-w-0 items-center gap-2 rounded-2xl bg-[#F7F1FA] px-3 py-2 text-left text-primary-900 sm:col-span-2"
+        >
+          <MapPinIcon {...iconProps} />
+          <div className="min-w-0 flex-1">
+            <span className="block truncate font-medium">{address || "-"}</span>
+            <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-secondary-400">
+              {t("offers.view_place")}
+            </span>
+          </div>
+        </button>
+      ) : (
+        <div className="flex w-full min-w-0 items-center gap-2 rounded-2xl bg-[#F7F1FA] px-3 py-2 text-primary-900 sm:col-span-2">
+          <MapPinIcon {...iconProps} />
+          <span className="truncate font-medium">{address || "-"}</span>
+        </div>
+      )}
+
+      <Modal
+        open={enablePlacePreview && hasPlace && isPlaceOpen}
+        onClose={() => setIsPlaceOpen(false)}
+        title={t("offers.location_details")}
+      >
+        <div className="space-y-4">
+          <div>
+            <p className="text-sm font-semibold text-primary-900">
+              {place?.name || address || "-"}
+            </p>
+            {address ? (
+              <p className="text-xs text-secondary-400">{address}</p>
+            ) : null}
+          </div>
+          <div className="overflow-hidden rounded-2xl border border-neutral-100">
+            {photoUrl && !photoError ? (
+              <img
+                src={photoUrl}
+                alt={place?.name || address || t("offers.place_photo")}
+                className="h-44 w-full object-cover"
+                onError={() => setPhotoError(true)}
+                loading="lazy"
+              />
+            ) : (
+              <div className="flex h-44 items-center justify-center bg-[#F7F1FA] text-xs text-secondary-400">
+                {t("offers.place_photo_unavailable")}
+              </div>
+            )}
+          </div>
+          <div className="overflow-hidden rounded-2xl border border-neutral-100">
+            {mapEmbedSrc ? (
+              <iframe
+                title={t("offers.place_map")}
+                src={mapEmbedSrc}
+                className="h-48 w-full"
+                loading="lazy"
+              />
+            ) : (
+              <div className="flex h-48 items-center justify-center bg-[#F7F1FA] text-xs text-secondary-400">
+                {t("offers.place_map_unavailable")}
+              </div>
+            )}
+          </div>
+          {placeUrl ? (
+            <a
+              href={placeUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center justify-center rounded-full border border-primary-500 px-4 py-2 text-sm font-semibold text-primary-500"
+            >
+              {t("offers.open_in_maps")}
+            </a>
+          ) : null}
+        </div>
+      </Modal>
     </div>
   );
 
