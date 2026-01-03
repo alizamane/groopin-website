@@ -11,6 +11,43 @@ import {
 } from "../ui/heroicons";
 import Modal from "../ui/modal";
 
+const KNOWN_PLACE_TYPES = new Set([
+  "establishment",
+  "point_of_interest",
+  "park",
+  "tourist_attraction",
+  "museum",
+  "natural_feature"
+]);
+
+const normalizePlaceTypes = (value) => {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item).toLowerCase());
+  }
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return [];
+    if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) {
+          return parsed.map((item) => String(item).toLowerCase());
+        }
+      } catch {
+        return [];
+      }
+    }
+    return trimmed
+      .split(",")
+      .map((item) => item.trim().toLowerCase())
+      .filter(Boolean);
+  }
+  return [];
+};
+
+const isKnownPlaceType = (types) =>
+  types.some((type) => KNOWN_PLACE_TYPES.has(type));
+
 const formatShortToken = (date, locale, options) => {
   const value = new Intl.DateTimeFormat(locale, options).format(date);
   const normalized = value.replace(/\./g, "").trim().slice(0, 3);
@@ -51,6 +88,8 @@ export default function OfferMainDetails({ offer, enablePlacePreview = false }) 
   const address = [cityName, addressText].filter(Boolean).join(" - ");
   const place = offer?.place || {};
   const hasPlace = Boolean(place?.id || (place?.lat && place?.lng));
+  const placeTypes = normalizePlaceTypes(place?.types);
+  const isPhotoEligible = isKnownPlaceType(placeTypes);
   const [isPlaceOpen, setIsPlaceOpen] = useState(false);
   const [photoError, setPhotoError] = useState(false);
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY;
@@ -74,6 +113,7 @@ export default function OfferMainDetails({ offer, enablePlacePreview = false }) 
     apiKey && place?.photo_reference
       ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=1200&photo_reference=${place.photo_reference}&key=${apiKey}`
       : "";
+  const canShowPhoto = Boolean(photoUrl && isPhotoEligible && !photoError);
   const dateLabel = formatDate(offer?.start_date, dateLocale);
   const timeLabel = formatTime(offer?.start_time);
   const endDateLabel = formatDate(offer?.end_date, dateLocale);
@@ -156,7 +196,7 @@ export default function OfferMainDetails({ offer, enablePlacePreview = false }) 
             ) : null}
           </div>
           <div className="overflow-hidden rounded-2xl border border-neutral-100">
-            {photoUrl && !photoError ? (
+            {canShowPhoto ? (
               <img
                 src={photoUrl}
                 alt={place?.name || address || t("offers.place_photo")}
