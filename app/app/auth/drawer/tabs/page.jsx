@@ -491,7 +491,9 @@ export default function TabsHomePage() {
               value={searchValue}
               onChange={(event) => setSearchValue(event.target.value)}
               placeholder={t("Search")}
-              className="w-full rounded-full border border-[#EADAF1] py-2 pl-11 pr-4 text-sm text-primary-900 outline-none focus:border-secondary-500"
+              className="w-full rounded-full border border-[#EADAF1] py-2 pl-11 pr-4 text-base text-primary-900 outline-none focus:border-secondary-500 sm:text-sm"
+              inputMode="search"
+              enterKeyHint="search"
             />
           </div>
           <button
