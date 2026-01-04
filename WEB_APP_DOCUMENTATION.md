@@ -101,9 +101,10 @@ These pages render inside `components/app-shell.jsx` which provides:
 
 - Route: `/app/auth/drawer/tabs`
   - File: `app/app/auth/drawer/tabs/page.jsx`
-  - Purpose: main offers feed with filters
+  - Purpose: main offers feed with filters + recommended/trending sections
   - UI: `OfferCard`, `Modal`, filters
-  - APIs: `GET parameters`, `GET offers?lite=1` (with filters)
+  - APIs: `GET parameters`, `GET offers/recommended?lite=1`, `GET offers?lite=1` (with filters)
+  - Notes: recommended/trending render only when no search or filters are active
 
 - Route: `/app/auth/drawer/tabs/my-offers`
   - File: `app/app/auth/drawer/tabs/my-offers/page.jsx`
@@ -424,6 +425,10 @@ Offers and lists
 - `GET offers?lite=1` (and filters)
   - Used in: `/app/auth/drawer/tabs`
   - Response used: `data` list of lite offer objects (see `API_LITE_CHANGES.md`)
+
+- `GET offers/recommended?lite=1&limit=6&trending_limit=6`
+  - Used in: `/app/auth/drawer/tabs`
+  - Response used: `data.recommended`, `data.trending` (lite offer objects), `meta`
 
 - `GET offers/{id}`
   - Used in: `/app/auth/offers/[id]`, `/app/auth/offers/[id]/participants`

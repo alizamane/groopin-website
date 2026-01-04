@@ -465,6 +465,12 @@
     "update_error": "لا يمكن التحديث",
     "update_success": " تحديث عرض بنجاح"
   },
+  "recommendations": {
+    "for_you": "موصى بها لك",
+    "for_you_hint": "بناءً على اهتماماتك",
+    "trending": "الأكثر رواجًا",
+    "trending_hint": "أنشطة شائعة بالقرب منك"
+  },
   "onboarding": {
     "message": "مرحبا بكم في موقع تطبيق obytes"
   },

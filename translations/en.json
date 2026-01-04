@@ -490,6 +490,12 @@
     "update_error": "could not update",
     "update_success": "Offer updated successfully"
   },
+  "recommendations": {
+    "for_you": "Recommended for you",
+    "for_you_hint": "Based on your interests",
+    "trending": "Trending now",
+    "trending_hint": "Popular activities nearby"
+  },
   "onboarding": {
     "message": "Welcome to obytes app site"
   },

@@ -490,6 +490,12 @@
     "update_error": "Impossible de mettre à jour",
     "update_success": "mis à jour avec succès "
   },
+  "recommendations": {
+    "for_you": "Recommandé pour vous",
+    "for_you_hint": "Basé sur vos centres d’intérêt",
+    "trending": "Tendances du moment",
+    "trending_hint": "Activités populaires près de vous"
+  },
   "onboarding": {
     "message": "Bienvenue sur le site de l'application obytes"
   },

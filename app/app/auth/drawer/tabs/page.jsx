@@ -154,6 +154,10 @@ const buildFilterParams = (filters, derivedCityIds = null) => {
 export default function TabsHomePage() {
   const { t } = useI18n();
   const [offers, setOffers] = useState([]);
+  const [recommendedOffers, setRecommendedOffers] = useState([]);
+  const [trendingOffers, setTrendingOffers] = useState([]);
+  const [recommendationsStatus, setRecommendationsStatus] = useState("idle");
+  const [recommendationsError, setRecommendationsError] = useState("");
   const [status, setStatus] = useState("loading");
   const [error, setError] = useState("");
   const [nextCursor, setNextCursor] = useState(null);
@@ -370,6 +374,61 @@ export default function TabsHomePage() {
         return value !== "";
       });
   }, [filters]);
+  const hasCategoryFilter = useMemo(
+    () => Array.isArray(filters.category) && filters.category.length > 0,
+    [filters.category]
+  );
+  const showRecommendations = useMemo(() => {
+    return (
+      !hasFilters &&
+      !hasCategoryFilter &&
+      searchValue.trim().length === 0
+    );
+  }, [hasFilters, hasCategoryFilter, searchValue]);
+  const recommendationIds = useMemo(() => {
+    return new Set(
+      [...recommendedOffers, ...trendingOffers]
+        .map((offer) => offer?.id)
+        .filter(Boolean)
+    );
+  }, [recommendedOffers, trendingOffers]);
+  const visibleOffers = useMemo(() => {
+    if (!showRecommendations || recommendationIds.size === 0) {
+      return offers;
+    }
+    return offers.filter((offer) => !recommendationIds.has(offer.id));
+  }, [offers, showRecommendations, recommendationIds]);
+  const showEmptyState =
+    status === "ready" &&
+    visibleOffers.length === 0 &&
+    (!showRecommendations ||
+      (recommendedOffers.length === 0 && trendingOffers.length === 0));
+
+  useEffect(() => {
+    if (!showRecommendations) {
+      setRecommendationsStatus("idle");
+      setRecommendationsError("");
+      return;
+    }
+
+    setRecommendationsStatus("loading");
+    setRecommendationsError("");
+    apiRequest("offers/recommended?lite=1&limit=6&trending_limit=6", {
+      cacheTime: 15000
+    })
+      .then((payload) => {
+        const data = payload?.data || {};
+        setRecommendedOffers(data.recommended || []);
+        setTrendingOffers(data.trending || []);
+        setRecommendationsStatus("ready");
+      })
+      .catch((err) => {
+        setRecommendationsError(err?.message || t("general.error_has_occurred"));
+        setRecommendationsStatus("error");
+        setRecommendedOffers([]);
+        setTrendingOffers([]);
+      });
+  }, [showRecommendations, t]);
 
   const updateRange = (key, index, value) => {
     const numberValue = value === "" ? null : Number(value);
@@ -549,13 +608,57 @@ export default function TabsHomePage() {
         <p className="text-sm text-danger-600">{error}</p>
       ) : null}
 
-      {status === "ready" && offers.length === 0 ? (
+      {showRecommendations && recommendationsStatus === "error" ? (
+        <p className="text-sm text-danger-600">{recommendationsError}</p>
+      ) : null}
+
+      {showRecommendations &&
+      recommendationsStatus === "ready" &&
+      recommendedOffers.length > 0 ? (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-primary-900">
+              {t("recommendations.for_you")}
+            </h2>
+            <span className="text-xs text-secondary-400">
+              {t("recommendations.for_you_hint")}
+            </span>
+          </div>
+          <div className="grid gap-5 md:grid-cols-2">
+            {recommendedOffers.map((offer) => (
+              <OfferCard key={`recommended-${offer.id}`} offer={offer} currentUserId={user?.id} />
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {showRecommendations &&
+      recommendationsStatus === "ready" &&
+      trendingOffers.length > 0 ? (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-primary-900">
+              {t("recommendations.trending")}
+            </h2>
+            <span className="text-xs text-secondary-400">
+              {t("recommendations.trending_hint")}
+            </span>
+          </div>
+          <div className="grid gap-5 md:grid-cols-2">
+            {trendingOffers.map((offer) => (
+              <OfferCard key={`trending-${offer.id}`} offer={offer} currentUserId={user?.id} />
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {showEmptyState ? (
         <p className="text-sm text-secondary-400">{t("nothingToShow")}</p>
       ) : null}
 
       {status === "ready" ? (
         <div className="grid gap-5 md:grid-cols-2">
-          {offers.map((offer) => (
+          {visibleOffers.map((offer) => (
             <OfferCard key={offer.id} offer={offer} currentUserId={user?.id} />
           ))}
         </div>
