@@ -151,6 +151,21 @@ const buildFilterParams = (filters, derivedCityIds = null) => {
   return params.toString();
 };
 
+const createDefaultFilters = () => ({
+  title: "",
+  category: null,
+  sex: null,
+  country: null,
+  city: null,
+  participants_count_between: null,
+  budget_between: null,
+  age_between: null,
+  start_time_between: null,
+  start_date_between: null,
+  interests: null,
+  marital_status: null
+});
+
 export default function TabsHomePage() {
   const { t } = useI18n();
   const [offers, setOffers] = useState([]);
@@ -174,20 +189,7 @@ export default function TabsHomePage() {
   const sentinelRef = useRef(null);
   const latestOfferRequestRef = useRef(0);
 
-  const [filters, setFilters] = useState({
-    title: "",
-    category: null,
-    sex: null,
-    country: null,
-    city: null,
-    participants_count_between: null,
-    budget_between: null,
-    age_between: null,
-    start_time_between: null,
-    start_date_between: null,
-    interests: null,
-    marital_status: null
-  });
+  const [filters, setFilters] = useState(createDefaultFilters);
 
   const [localFilters, setLocalFilters] = useState(filters);
   const timeRanges = useMemo(
@@ -378,6 +380,10 @@ export default function TabsHomePage() {
         return value !== "";
       });
   }, [filters]);
+  const isAllActive =
+    feedMode === "all" &&
+    !hasFilters &&
+    (!filters.category || filters.category.length === 0);
   const showRecommendations = feedMode !== "all";
   const activeRecommendations =
     feedMode === "recommended" ? recommendedOffers : trendingOffers;
@@ -453,6 +459,14 @@ export default function TabsHomePage() {
     });
   };
 
+  const resetAllFilters = () => {
+    const reset = createDefaultFilters();
+    setSearchValue("");
+    setFilters(reset);
+    setLocalFilters(reset);
+    setFeedMode("all");
+  };
+
   const handleApplyFilters = () => {
     setFilters(localFilters);
     setFeedMode("all");
@@ -460,22 +474,7 @@ export default function TabsHomePage() {
   };
 
   const handleResetFilters = () => {
-    const reset = {
-      ...filters,
-      sex: null,
-      country: null,
-      city: null,
-      participants_count_between: null,
-      budget_between: null,
-      age_between: null,
-      start_time_between: null,
-      start_date_between: null,
-      interests: null,
-      marital_status: null
-    };
-    setLocalFilters(reset);
-    setFilters(reset);
-    setFeedMode("all");
+    resetAllFilters();
   };
 
   const setCategory = (categoryId) => {
@@ -569,8 +568,8 @@ export default function TabsHomePage() {
           {renderChip(
             "feed-all",
             t("All"),
-            feedMode === "all",
-            () => setFeedMode("all")
+            isAllActive,
+            () => resetAllFilters()
           )}
           {renderChip(
             "feed-recommended",
@@ -583,12 +582,6 @@ export default function TabsHomePage() {
             t("recommendations.trending"),
             feedMode === "trending",
             () => setFeedMode("trending")
-          )}
-          {renderChip(
-            "category-all",
-            t("All"),
-            !filters.category || filters.category.length === 0,
-            () => setCategory(null)
           )}
           {categories.map((category, index) =>
             renderChip(
