@@ -169,6 +169,7 @@ export default function TabsHomePage() {
   const [maritalStatus, setMaritalStatus] = useState([]);
   const [isFilterOpen, setFilterOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
+  const [feedMode, setFeedMode] = useState("all");
   const user = getUser();
   const sentinelRef = useRef(null);
   const latestOfferRequestRef = useRef(0);
@@ -274,6 +275,9 @@ export default function TabsHomePage() {
   useEffect(() => {
     const timeout = setTimeout(() => {
       const trimmed = searchValue.trim();
+      if (trimmed && feedMode !== "all") {
+        setFeedMode("all");
+      }
       setFilters((prev) => {
         const nextTitle = trimmed ? trimmed : "";
         if (prev.title === nextTitle) return prev;
@@ -285,7 +289,7 @@ export default function TabsHomePage() {
     }, 300);
 
     return () => clearTimeout(timeout);
-  }, [searchValue]);
+  }, [searchValue, feedMode]);
 
   const buildOffersEndpoint = (cursor = null) => {
     const query = buildFilterParams(filters, derivedCountryCityIds);
@@ -374,42 +378,20 @@ export default function TabsHomePage() {
         return value !== "";
       });
   }, [filters]);
-  const hasCategoryFilter = useMemo(
-    () => Array.isArray(filters.category) && filters.category.length > 0,
-    [filters.category]
-  );
-  const showRecommendations = useMemo(() => {
-    return (
-      !hasFilters &&
-      !hasCategoryFilter &&
-      searchValue.trim().length === 0
-    );
-  }, [hasFilters, hasCategoryFilter, searchValue]);
-  const recommendationIds = useMemo(() => {
-    return new Set(
-      [...recommendedOffers, ...trendingOffers]
-        .map((offer) => offer?.id)
-        .filter(Boolean)
-    );
-  }, [recommendedOffers, trendingOffers]);
-  const visibleOffers = useMemo(() => {
-    if (!showRecommendations || recommendationIds.size === 0) {
-      return offers;
-    }
-    return offers.filter((offer) => !recommendationIds.has(offer.id));
-  }, [offers, showRecommendations, recommendationIds]);
-  const showEmptyState =
-    status === "ready" &&
-    visibleOffers.length === 0 &&
-    (!showRecommendations ||
-      (recommendedOffers.length === 0 && trendingOffers.length === 0));
+  const showRecommendations = feedMode !== "all";
+  const activeRecommendations =
+    feedMode === "recommended" ? recommendedOffers : trendingOffers;
+  const activeRecommendationsTitle =
+    feedMode === "recommended"
+      ? t("recommendations.for_you")
+      : t("recommendations.trending");
+  const activeRecommendationsHint =
+    feedMode === "recommended"
+      ? t("recommendations.for_you_hint")
+      : t("recommendations.trending_hint");
 
   useEffect(() => {
-    if (!showRecommendations) {
-      setRecommendationsStatus("idle");
-      setRecommendationsError("");
-      return;
-    }
+    if (!showRecommendations) return;
 
     setRecommendationsStatus("loading");
     setRecommendationsError("");
@@ -428,7 +410,7 @@ export default function TabsHomePage() {
         setRecommendedOffers([]);
         setTrendingOffers([]);
       });
-  }, [showRecommendations, t]);
+  }, [feedMode, showRecommendations, t]);
 
   const updateRange = (key, index, value) => {
     const numberValue = value === "" ? null : Number(value);
@@ -473,6 +455,7 @@ export default function TabsHomePage() {
 
   const handleApplyFilters = () => {
     setFilters(localFilters);
+    setFeedMode("all");
     setFilterOpen(false);
   };
 
@@ -492,12 +475,14 @@ export default function TabsHomePage() {
     };
     setLocalFilters(reset);
     setFilters(reset);
+    setFeedMode("all");
   };
 
   const setCategory = (categoryId) => {
     const nextCategory = categoryId ? [categoryId] : null;
     setFilters((prev) => ({ ...prev, category: nextCategory }));
     setLocalFilters((prev) => ({ ...prev, category: nextCategory }));
+    setFeedMode("all");
   };
 
   const renderChip = (
@@ -548,7 +533,12 @@ export default function TabsHomePage() {
             />
             <input
               value={searchValue}
-              onChange={(event) => setSearchValue(event.target.value)}
+              onChange={(event) => {
+                setSearchValue(event.target.value);
+                if (feedMode !== "all") {
+                  setFeedMode("all");
+                }
+              }}
               placeholder={t("Search")}
               className="w-full rounded-full border border-[#EADAF1] py-2 pl-11 pr-4 text-base text-primary-900 outline-none focus:border-secondary-500 sm:text-sm"
               inputMode="search"
@@ -557,7 +547,10 @@ export default function TabsHomePage() {
           </div>
           <button
             type="button"
-            onClick={() => setFilterOpen(true)}
+            onClick={() => {
+              setFeedMode("all");
+              setFilterOpen(true);
+            }}
             className={`flex h-11 w-11 items-center justify-center rounded-lg border transition ${
               hasFilters
                 ? "border-secondary-500 bg-secondary-500 text-white"
@@ -572,7 +565,27 @@ export default function TabsHomePage() {
           </button>
         </div>
 
-        <div className="flex flex-col gap-3 md:flex-row md:items-center">
+        <div className="flex flex-col gap-3">
+          <div className="hide-scrollbar flex flex-1 flex-nowrap items-center gap-2 overflow-x-auto pb-1">
+            {renderChip(
+              "feed-all",
+              t("All"),
+              feedMode === "all",
+              () => setFeedMode("all")
+            )}
+            {renderChip(
+              "feed-recommended",
+              t("recommendations.for_you"),
+              feedMode === "recommended",
+              () => setFeedMode("recommended")
+            )}
+            {renderChip(
+              "feed-trending",
+              t("recommendations.trending"),
+              feedMode === "trending",
+              () => setFeedMode("trending")
+            )}
+          </div>
           <div className="hide-scrollbar flex flex-1 flex-nowrap items-center gap-2 overflow-x-auto pb-1">
             {renderChip(
               "category-all",
@@ -593,7 +606,7 @@ export default function TabsHomePage() {
         </div>
       </div>
 
-      {status === "loading" ? (
+      {feedMode === "all" && status === "loading" ? (
         <div className="space-y-3">
           {Array.from({ length: 3 }).map((_, index) => (
             <div
@@ -604,8 +617,19 @@ export default function TabsHomePage() {
         </div>
       ) : null}
 
-      {status === "error" ? (
+      {feedMode === "all" && status === "error" ? (
         <p className="text-sm text-danger-600">{error}</p>
+      ) : null}
+
+      {showRecommendations && recommendationsStatus === "loading" ? (
+        <div className="space-y-3">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <div
+              key={`recommendations-skeleton-${index}`}
+              className="h-32 animate-pulse rounded-2xl bg-neutral-100"
+            />
+          ))}
+        </div>
       ) : null}
 
       {showRecommendations && recommendationsStatus === "error" ? (
@@ -614,19 +638,23 @@ export default function TabsHomePage() {
 
       {showRecommendations &&
       recommendationsStatus === "ready" &&
-      recommendedOffers.length > 0 ? (
+      activeRecommendations.length > 0 ? (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-primary-900">
-              {t("recommendations.for_you")}
+              {activeRecommendationsTitle}
             </h2>
             <span className="text-xs text-secondary-400">
-              {t("recommendations.for_you_hint")}
+              {activeRecommendationsHint}
             </span>
           </div>
           <div className="grid gap-5 md:grid-cols-2">
-            {recommendedOffers.map((offer) => (
-              <OfferCard key={`recommended-${offer.id}`} offer={offer} currentUserId={user?.id} />
+            {activeRecommendations.map((offer) => (
+              <OfferCard
+                key={`${feedMode}-${offer.id}`}
+                offer={offer}
+                currentUserId={user?.id}
+              />
             ))}
           </div>
         </div>
@@ -634,37 +662,23 @@ export default function TabsHomePage() {
 
       {showRecommendations &&
       recommendationsStatus === "ready" &&
-      trendingOffers.length > 0 ? (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-primary-900">
-              {t("recommendations.trending")}
-            </h2>
-            <span className="text-xs text-secondary-400">
-              {t("recommendations.trending_hint")}
-            </span>
-          </div>
-          <div className="grid gap-5 md:grid-cols-2">
-            {trendingOffers.map((offer) => (
-              <OfferCard key={`trending-${offer.id}`} offer={offer} currentUserId={user?.id} />
-            ))}
-          </div>
-        </div>
-      ) : null}
-
-      {showEmptyState ? (
+      activeRecommendations.length === 0 ? (
         <p className="text-sm text-secondary-400">{t("nothingToShow")}</p>
       ) : null}
 
-      {status === "ready" ? (
+      {feedMode === "all" && status === "ready" && offers.length === 0 ? (
+        <p className="text-sm text-secondary-400">{t("nothingToShow")}</p>
+      ) : null}
+
+      {feedMode === "all" && status === "ready" ? (
         <div className="grid gap-5 md:grid-cols-2">
-          {visibleOffers.map((offer) => (
+          {offers.map((offer) => (
             <OfferCard key={offer.id} offer={offer} currentUserId={user?.id} />
           ))}
         </div>
       ) : null}
 
-      {status === "ready" && hasNextPage ? (
+      {feedMode === "all" && status === "ready" && hasNextPage ? (
         <div
           ref={sentinelRef}
           className="flex items-center justify-center py-6 text-xs text-secondary-400"
