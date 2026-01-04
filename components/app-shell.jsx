@@ -40,6 +40,7 @@ export default function AppShell({ children }) {
   const [unreadGroopsCount, setUnreadGroopsCount] = useState(0);
   const [webPushReady, setWebPushReady] = useState(false);
   const activeConversationIdRef = useRef(null);
+  const verificationRefreshRef = useRef(false);
 
   const menuItems = [
     { label: t("Favorites"), href: "/app/auth/favorites", icon: HeartIcon },
@@ -176,6 +177,7 @@ export default function AppShell({ children }) {
 
   useEffect(() => {
     if (!user) {
+      verificationRefreshRef.current = false;
       return;
     }
 
@@ -189,8 +191,32 @@ export default function AppShell({ children }) {
       user.is_verified === false &&
       pathname !== "/app/auth/otp-verify-email-verification"
     ) {
-      router.replace("/app/auth/otp-verify-email-verification");
+      if (verificationRefreshRef.current) {
+        router.replace("/app/auth/otp-verify-email-verification");
+        return;
+      }
+
+      verificationRefreshRef.current = true;
+      apiRequest("user", {
+        method: "GET",
+        cache: false,
+        dedupe: false
+      })
+        .then((payload) => {
+          const freshUser = payload?.data || null;
+          setUser(freshUser);
+          const token = getToken();
+          if (token) {
+            setSession(token, freshUser);
+          }
+        })
+        .catch(() => {
+          router.replace("/app/auth/otp-verify-email-verification");
+        });
+      return;
     }
+
+    verificationRefreshRef.current = false;
   }, [pathname, router, user]);
 
   useEffect(() => {
