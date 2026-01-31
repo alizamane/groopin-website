@@ -186,6 +186,7 @@ export default function ConversationPage() {
   const typingCleanupRef = useRef(new Map());
   const pendingScrollRestoreRef = useRef(null);
   const stickToBottomRef = useRef(true);
+  const pinnedMessageRef = useRef(null);
   const paginationRef = useRef({
     currentPage: 1,
     lastPage: 1,
@@ -207,6 +208,10 @@ export default function ConversationPage() {
   useEffect(() => {
     messagesRef.current = messages;
   }, [messages]);
+
+  useEffect(() => {
+    pinnedMessageRef.current = pinnedMessage;
+  }, [pinnedMessage]);
 
   useEffect(() => {
     paginationRef.current = pagination;
@@ -595,6 +600,47 @@ export default function ConversationPage() {
           if (Number(message.id) !== Number(messageId)) return message;
           return { ...message, reactions };
         })
+      );
+    });
+
+    channel.listen(".message:poll", (event) => {
+      if (Number(event?.conversation_id) !== Number(params.id)) return;
+      const messageId = event?.message_id;
+      if (!messageId || !event?.poll) return;
+      updateMessagePoll(messageId, event.poll, { preservePending: true });
+    });
+
+    channel.listen(".message:pin", (event) => {
+      if (Number(event?.conversation_id) !== Number(params.id)) return;
+      if (event?.action === "pinned") {
+        const pinnedPayload = event?.pinned_message || null;
+        const cachedPinned = messagesRef.current.find(
+          (message) => Number(message?.id) === Number(event?.message_id)
+        );
+        if (cachedPinned) {
+          setPinnedMessage(cachedPinned);
+          return;
+        }
+        const normalizedPinned = pinnedPayload
+          ? normalizeMessage(pinnedPayload)
+          : null;
+        setPinnedMessage(normalizedPinned || pinnedPayload || null);
+        return;
+      }
+      if (event?.action === "unpinned") {
+        setPinnedMessage(null);
+      }
+    });
+
+    channel.listen(".message:deleted", (event) => {
+      if (Number(event?.conversation_id) !== Number(params.id)) return;
+      const messageId = event?.message_id;
+      if (!messageId) return;
+      setMessages((prev) =>
+        prev.filter((message) => Number(message.id) !== Number(messageId))
+      );
+      setPinnedMessage((prev) =>
+        prev && Number(prev.id) === Number(messageId) ? null : prev
       );
     });
 
@@ -1000,15 +1046,33 @@ export default function ConversationPage() {
     }
   };
 
-  const updateMessagePoll = (messageId, poll) => {
+  const updateMessagePoll = (messageId, poll, options = {}) => {
     if (!messageId || !poll) return;
-    const normalizedPoll = normalizePoll(poll);
+    const { preservePending = false } = options;
+    const existingMessage = messagesRef.current.find(
+      (message) => Number(message?.id) === Number(messageId)
+    );
+    const existingVotes =
+      existingMessage?.poll?.my_votes ||
+      (pinnedMessageRef.current &&
+      Number(pinnedMessageRef.current.id) === Number(messageId)
+        ? pinnedMessageRef.current.poll?.my_votes
+        : null);
+    const pollWithVotes = Array.isArray(poll.my_votes)
+      ? poll
+      : {
+          ...poll,
+          my_votes: Array.isArray(existingVotes) ? existingVotes : []
+        };
+    const normalizedPoll = normalizePoll(pollWithVotes);
     if (!normalizedPoll) return;
-    setPendingPollSelections((prev) => {
-      const next = { ...prev };
-      delete next[messageId];
-      return next;
-    });
+    if (!preservePending) {
+      setPendingPollSelections((prev) => {
+        const next = { ...prev };
+        delete next[messageId];
+        return next;
+      });
+    }
     setMessages((prev) =>
       prev.map((message) => {
         if (Number(message.id) !== Number(messageId)) return message;
